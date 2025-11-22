@@ -41,3 +41,25 @@
   color: #888;
 }
 
+/* Center RainbowKit ConnectButton */
+.connect-button-wrapper {
+  text-align: center !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.connect-button-wrapper > *,
+.connect-button-wrapper > div,
+.connect-button-wrapper [data-rk] {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+}
+
+.connect-button-wrapper button {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+

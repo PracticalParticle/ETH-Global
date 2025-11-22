@@ -1,6 +1,7 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount, useBalance } from 'wagmi'
 import './App.css'
+import { formatEther } from 'viem'
 
 function App() {
 
@@ -10,29 +11,31 @@ function App() {
   })
 
   return (
-    <>
-      <div>
-        <h1>Hackathon UI</h1>
-        <div className="card">
-          <div style={{ marginBottom: '1rem' }}>
+    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+      <div className="max-w-2xl w-full">
+        <h1 className="text-4xl font-bold text-center mb-8">ETHGlobal Hackathon</h1>
+        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+          <div className="mb-4 w-full connect-button-wrapper">
             <ConnectButton />
           </div>
           {isConnected && (
-            <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
-              <p><strong>Connected:</strong> {address}</p>
+            <div className="mb-4 p-4 bg-gray-700/50 rounded-lg">
+              <p className="mb-2"><strong>Connected:</strong> {address}</p>
               {balance && (
-                <p><strong>Balance:</strong> {balance.formatted} {balance.symbol}</p>
+                <p><strong>Balance:</strong> {formatEther(balance.value)} {balance.symbol}</p>
               )}
             </div>
           )}
-      
-        
+          
+          
         </div>
-        <p className="read-the-docs">
-          Connect your wallet to get started
-        </p>
+        {!isConnected && (
+          <p className="text-center text-gray-400 mt-4">
+            Connect your wallet to get started
+          </p>
+        )}
       </div>
-    </>
+    </div>
   )
 }
 
