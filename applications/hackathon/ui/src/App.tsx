@@ -1,23 +1,35 @@
-import { useState } from 'react'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { useAccount, useBalance } from 'wagmi'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+
+  const { address, isConnected } = useAccount()
+  const { data: balance } = useBalance({
+    address: address,
+  })
 
   return (
     <>
       <div>
-        <h1>Vite + React + TypeScript</h1>
+        <h1>Hackathon UI</h1>
         <div className="card">
-          <button onClick={() => setCount((count) => count + 1)}>
-            count is {count}
-          </button>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test HMR
-          </p>
+          <div style={{ marginBottom: '1rem' }}>
+            <ConnectButton />
+          </div>
+          {isConnected && (
+            <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+              <p><strong>Connected:</strong> {address}</p>
+              {balance && (
+                <p><strong>Balance:</strong> {balance.formatted} {balance.symbol}</p>
+              )}
+            </div>
+          )}
+      
+        
         </div>
         <p className="read-the-docs">
-          Click on the Vite and React logos to learn more
+          Connect your wallet to get started
         </p>
       </div>
     </>
