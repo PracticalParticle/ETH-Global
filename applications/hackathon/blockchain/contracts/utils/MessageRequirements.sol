@@ -7,6 +7,16 @@ pragma solidity ^0.8.25;
  */
 library MessageRequirements {
     /**
+     * @notice Security level for routing decisions
+     */
+    enum SecurityLevel {
+        LOW,      // Standard security
+        MEDIUM,   // Enhanced security
+        HIGH,     // High security requirements
+        CRITICAL  // Maximum security
+    }
+    
+    /**
      * @notice Message requirements for routing decisions
      * @param requiresFastFinality Whether fast finality is required (use LayerZero)
      * @param requiresGuaranteedDelivery Whether guaranteed delivery is required (use LayerZero executor)
@@ -14,6 +24,9 @@ library MessageRequirements {
      * @param isMultiChain Whether operation spans multiple chains (use LayerZero)
      * @param maxDelay Maximum acceptable delay in seconds
      * @param amount Transfer amount (for threshold-based decisions)
+     * @param requiresNativeSecurity Whether native bridge security is required (prefer EIL native)
+     * @param requiresDisputeResolution Whether dispute resolution mechanisms are required (prefer EIL)
+     * @param securityLevel Security level requirement (LOW, MEDIUM, HIGH, CRITICAL)
      */
     struct Requirements {
         bool requiresFastFinality;
@@ -22,6 +35,9 @@ library MessageRequirements {
         bool isMultiChain;
         uint256 maxDelay;
         uint256 amount;
+        bool requiresNativeSecurity;
+        bool requiresDisputeResolution;
+        SecurityLevel securityLevel;
     }
     
     /**
@@ -47,6 +63,31 @@ library MessageRequirements {
         
         if (!isNativeBridgeChain) {
             return false; // Must use LayerZero for non-native chains
+        }
+        
+        // Security requirements take precedence
+        // If native security required, prefer EIL native (if available)
+        if (req.requiresNativeSecurity && isNativeBridgeChain) {
+            // Only use native if we can tolerate the delay
+            if (req.maxDelay >= 7 days || !req.requiresFastFinality) {
+                return true;
+            }
+        }
+        
+        // If dispute resolution required, prefer EIL native
+        if (req.requiresDisputeResolution && isNativeBridgeChain) {
+            // Only use native if we can tolerate the delay
+            if (req.maxDelay >= 7 days || !req.requiresFastFinality) {
+                return true;
+            }
+        }
+        
+        // Critical security level may require native security even with delay
+        if (req.securityLevel == SecurityLevel.CRITICAL && isNativeBridgeChain) {
+            // For critical operations, prefer native security if delay is acceptable
+            if (req.maxDelay >= 7 days || !req.requiresFastFinality) {
+                return true;
+            }
         }
         
         // If fast finality required, use LayerZero
@@ -86,7 +127,10 @@ library MessageRequirements {
             isCostSensitive: true,
             isMultiChain: false,
             maxDelay: maxDelay,
-            amount: amount
+            amount: amount,
+            requiresNativeSecurity: false,
+            requiresDisputeResolution: false,
+            securityLevel: SecurityLevel.LOW
         });
     }
     
@@ -102,7 +146,10 @@ library MessageRequirements {
             isCostSensitive: false,
             isMultiChain: false,
             maxDelay: 1 hours,
-            amount: amount
+            amount: amount,
+            requiresNativeSecurity: false,
+            requiresDisputeResolution: false,
+            securityLevel: SecurityLevel.MEDIUM
         });
     }
     
@@ -118,7 +165,57 @@ library MessageRequirements {
             isCostSensitive: false,
             isMultiChain: true,
             maxDelay: 1 hours,
-            amount: amount
+            amount: amount,
+            requiresNativeSecurity: false,
+            requiresDisputeResolution: false,
+            securityLevel: SecurityLevel.MEDIUM
+        });
+    }
+    
+    /**
+     * @notice Create default requirements for security-sensitive operations
+     * @param amount Transfer amount
+     * @param maxDelay Maximum acceptable delay
+     * @param securityLevel Security level requirement
+     */
+    function createSecuritySensitiveRequirements(
+        uint256 amount,
+        uint256 maxDelay,
+        SecurityLevel securityLevel
+    ) internal pure returns (Requirements memory) {
+        bool requiresNative = securityLevel >= SecurityLevel.HIGH;
+        bool requiresDispute = securityLevel >= SecurityLevel.HIGH;
+        
+        return Requirements({
+            requiresFastFinality: false, // Security over speed
+            requiresGuaranteedDelivery: true,
+            isCostSensitive: false,
+            isMultiChain: false,
+            maxDelay: maxDelay,
+            amount: amount,
+            requiresNativeSecurity: requiresNative,
+            requiresDisputeResolution: requiresDispute,
+            securityLevel: securityLevel
+        });
+    }
+    
+    /**
+     * @notice Create default requirements for critical operations
+     * @param amount Transfer amount
+     */
+    function createCriticalSecurityRequirements(
+        uint256 amount
+    ) internal pure returns (Requirements memory) {
+        return Requirements({
+            requiresFastFinality: false, // Security is priority
+            requiresGuaranteedDelivery: true,
+            isCostSensitive: false,
+            isMultiChain: false,
+            maxDelay: 7 days, // Can wait for native security
+            amount: amount,
+            requiresNativeSecurity: true,
+            requiresDisputeResolution: true,
+            securityLevel: SecurityLevel.CRITICAL
         });
     }
 }
