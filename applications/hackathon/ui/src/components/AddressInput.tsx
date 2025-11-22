@@ -7,7 +7,6 @@ interface AddressInputProps {
   onChange: (value: string) => void
   placeholder?: string
   disabled?: boolean
-  onQrClick?: () => void
 }
 
 export function AddressInput({
@@ -15,7 +14,6 @@ export function AddressInput({
   onChange,
   placeholder = 'Enter address, ENS name...',
   disabled,
-  onQrClick,
 }: AddressInputProps) {
   const [ensName, setEnsName] = useState<string | null>(null)
   const [isResolving, setIsResolving] = useState(false)
@@ -86,22 +84,13 @@ export function AddressInput({
             : 'border-red-500 dark:border-red-500'
         } bg-background-light dark:bg-zinc-900/50 focus:border-primary h-14 placeholder:text-zinc-500 dark:placeholder:text-gray-500 p-4 text-base font-normal leading-normal disabled:opacity-50 disabled:cursor-not-allowed`}
       />
-      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-        {isResolving ? (
+      {isResolving && (
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
           <div className="text-zinc-500 dark:text-gray-400 flex items-center justify-center">
             <span className="material-symbols-outlined animate-spin">sync</span>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onQrClick}
-            className="text-primary flex border-0 bg-transparent items-center justify-center hover:opacity-80"
-            title="Scan QR code"
-          >
-            <span className="material-symbols-outlined !text-[#00F5D4]">qr_code_scanner</span>
-          </button>
-        )}
-      </div>
+        </div>
+      )}
       {ensName && value && isAddress(value) && (
         <div className="absolute -top-6 left-0 text-xs text-zinc-500 dark:text-gray-400">
           {ensName}

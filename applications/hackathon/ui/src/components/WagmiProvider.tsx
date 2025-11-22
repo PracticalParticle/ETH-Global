@@ -3,7 +3,8 @@ import { WagmiProvider, http, createConfig } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, lightTheme, darkTheme } from '@rainbow-me/rainbowkit';
 import { injected } from 'wagmi/connectors';
-import { sepolia, mainnet } from 'wagmi/chains';
+import { LAYERZERO_CHAINS } from '../lib/chains';
+import type { Chain } from 'wagmi/chains';
 
 // Create a new QueryClient instance with conservative defaults
 const queryClient = new QueryClient({
@@ -21,13 +22,18 @@ const queryClient = new QueryClient({
   },
 });
 
+// Use LayerZero chains directly - TypeScript requires at least one chain
+const supportedChains = LAYERZERO_CHAINS as readonly [Chain, ...Chain[]];
+
+// Create transports for all supported chains
+const transports = Object.fromEntries(
+  supportedChains.map((chain) => [chain.id, http()])
+);
+
 // Configure wagmi with supported chains
 const wagmiConfig = createConfig({
-  chains: [sepolia, mainnet],
-  transports: {
-    [sepolia.id]: http(),
-    [mainnet.id]: http(),
-  },
+  chains: supportedChains,
+  transports,
   ssr: false,
   connectors: [injected()],
 });
