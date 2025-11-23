@@ -64,12 +64,12 @@ export function ChainSelector({ selectedChainId, onChainSelect, disabled }: Chai
   }
 
   return (
-    <div className="relative w-full md:w-auto" ref={dropdownRef}>
+    <div className="relative w-full" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className="flex items-center justify-between w-full h-14 pl-3 pr-2 rounded-xl border border-gray-300 dark:border-zinc-700 bg-background-light dark:bg-zinc-900/50 hover:border-primary/50 dark:hover:border-primary/50 focus:outline-0 focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+        className="glass-input flex items-center justify-between w-full h-14 pl-3 pr-2 hover:border-primary/50 dark:hover:border-primary/50 focus:outline-0 focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <img
@@ -102,9 +102,9 @@ export function ChainSelector({ selectedChainId, onChainSelect, disabled }: Chai
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full md:w-96 bg-background-light dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 rounded-xl shadow-lg max-h-64 overflow-auto">
+        <div className="absolute z-50 mt-2 w-full md:w-96 glass-card rounded-xl shadow-glass max-h-64 overflow-auto">
           {/* Testnet Toggle */}
-          <div className="sticky top-0 bg-background-light dark:bg-zinc-900 border-b border-gray-300 dark:border-zinc-700 px-4 py-3 flex items-center justify-between z-10">
+          <div className="sticky top-0 glass-panel border-b border-white/20 dark:border-white/10 px-4 py-3 flex items-center justify-between z-10">
             <span className="text-zinc-600 dark:text-gray-400 text-sm font-medium">
               Testnets Only
             </span>
@@ -132,7 +132,7 @@ export function ChainSelector({ selectedChainId, onChainSelect, disabled }: Chai
               key={chain.id}
               type="button"
               onClick={() => handleSelect(chain.id)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-200 dark:hover:bg-zinc-800 transition-colors first:rounded-t-xl last:rounded-b-xl"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 dark:hover:bg-white/5 transition-colors first:rounded-t-xl last:rounded-b-xl"
             >
               <img
                 alt={`${chain.name} logo`}
