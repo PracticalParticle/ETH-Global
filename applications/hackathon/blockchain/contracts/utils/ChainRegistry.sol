@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: Custom
 pragma solidity ^0.8.25;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 /**
  * @title ChainRegistry
  * @notice Registry for mapping chain IDs to LayerZero endpoint IDs
  * @dev Provides chain ID to endpoint ID conversion for LayerZero
  */
-contract ChainRegistry {
+contract ChainRegistry is Ownable {
     // ============ Errors ============
     
     error ChainNotRegistered(uint256 chainId);
     error InvalidEndpointId(uint32 eid);
     error ChainAlreadyRegistered(uint256 chainId);
+    
+    // ============ Constructor ============
+    
+    constructor() Ownable() {}
     
     // ============ State ============
     
@@ -31,7 +37,7 @@ contract ChainRegistry {
      * @param chainId The chain ID
      * @param eid The LayerZero endpoint ID
      */
-    function registerChain(uint256 chainId, uint32 eid) external {
+    function registerChain(uint256 chainId, uint32 eid) external onlyOwner {
         require(chainIdToEid[chainId] == 0, "Chain already registered");
         require(eidToChainId[eid] == 0, "Endpoint ID already registered");
         
@@ -46,7 +52,7 @@ contract ChainRegistry {
      * @notice Unregister a chain
      * @param chainId The chain ID to unregister
      */
-    function unregisterChain(uint256 chainId) external {
+    function unregisterChain(uint256 chainId) external onlyOwner {
         uint32 eid = chainIdToEid[chainId];
         require(eid != 0, "Chain not registered");
         
