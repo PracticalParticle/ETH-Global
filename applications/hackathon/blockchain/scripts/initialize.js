@@ -7,7 +7,11 @@ const path = require("path");
  * @dev Initializes EnterpriseCrossChainMessenger and sets up router connections
  */
 async function main() {
-    const [deployer, owner, broadcaster, recovery] = await ethers.getSigners();
+    const signers = await ethers.getSigners();
+    const deployer = signers[0];
+    const owner = signers[1] || signers[0];
+    const broadcaster = signers[2] || signers[0];
+    const recovery = signers[3] || signers[0];
     console.log("Initializing contracts...");
     console.log("Deployer:", deployer.address);
     console.log("Owner:", owner.address);
@@ -31,7 +35,16 @@ async function main() {
     // Get contract instances
     const ChainRegistry = await ethers.getContractFactory("ChainRegistry");
     const HybridOrchestrationRouter = await ethers.getContractFactory("HybridOrchestrationRouter");
-    const EnterpriseCrossChainMessenger = await ethers.getContractFactory("EnterpriseCrossChainMessenger");
+    
+    // Load library addresses from deployment info
+    const libraries = {};
+    if (deploymentInfo.libraries) {
+        Object.assign(libraries, deploymentInfo.libraries);
+    }
+    
+    const EnterpriseCrossChainMessenger = await ethers.getContractFactory("EnterpriseCrossChainMessenger", {
+        libraries: libraries
+    });
 
     const chainRegistry = ChainRegistry.attach(deploymentInfo.contracts.ChainRegistry);
     const router = HybridOrchestrationRouter.attach(deploymentInfo.contracts.HybridOrchestrationRouter);
@@ -45,7 +58,7 @@ async function main() {
     const initialBroadcaster = process.env.INITIAL_BROADCASTER || broadcaster.address;
     const initialRecovery = process.env.INITIAL_RECOVERY || recovery.address;
 
-    const initTx = await messenger.initialize(
+    const initTx = await messenger["initialize(address,address,address,address,address)"](
         initialOwner,
         initialBroadcaster,
         initialRecovery,
@@ -64,27 +77,44 @@ async function main() {
     await setReceiverTx.wait();
     console.log("✅ Message receiver set to:", deploymentInfo.contracts.EnterpriseCrossChainMessenger);
 
-    // ============ Register Common Chains (Optional) ============
+    // ============ Register EIL Bridge Connectors (if on Ethereum Sepolia) ============
+    if (network.chainId === 11155111n) {
+        console.log("\n🌉 Registering EIL bridge connectors for Arbitrum Sepolia...");
+        const ARB_SEPOLIA_CHAIN_ID = 421614;
+        const L1_ARB_BRIDGE = "0x2Efeb9A8aa5d20D50f05Be721cCb64332dE2A6a2";
+        const L2_ARB_BRIDGE = "0xDFa250f671A60B64dD3cD625AD2056b9B4A9124F";
+        
+        try {
+            const registerTx = await router.registerNativeBridge(
+                ARB_SEPOLIA_CHAIN_ID,
+                L1_ARB_BRIDGE,
+                L2_ARB_BRIDGE
+            );
+            await registerTx.wait();
+            console.log(`✅ Registered Arbitrum Sepolia native bridge`);
+            console.log(`   L1 Bridge: ${L1_ARB_BRIDGE}`);
+            console.log(`   L2 Bridge: ${L2_ARB_BRIDGE}`);
+            deploymentInfo.eilBridge = {
+                arbitrumSepolia: {
+                    chainId: ARB_SEPOLIA_CHAIN_ID,
+                    l1Bridge: L1_ARB_BRIDGE,
+                    l2Bridge: L2_ARB_BRIDGE
+                }
+            };
+        } catch (error) {
+            console.log(`⚠️  Failed to register EIL bridge:`, error.message);
+        }
+    }
+
+    // ============ Register Common Chains ============
     console.log("\n🌐 Registering common chains...");
     
-    // Common LayerZero endpoint IDs (adjust based on network)
+    // Common LayerZero endpoint IDs
     const commonChains = {
-        // Ethereum Mainnet
-        1: 30101,
         // Sepolia
         11155111: 40161,
-        // Arbitrum One
-        42161: 30110,
         // Arbitrum Sepolia
-        421614: 40231,
-        // Optimism
-        10: 30111,
-        // Optimism Sepolia
-        11155420: 40232,
-        // Base
-        8453: 30184,
-        // Base Sepolia
-        84532: 40245
+        421614: 40231
     };
 
     const currentChainId = Number(network.chainId.toString());
@@ -121,10 +151,12 @@ async function main() {
     console.log("EnterpriseCrossChainMessenger initialized");
     console.log("Router message receiver configured");
     console.log("Chains registered in ChainRegistry");
+    if (network.chainId === 11155111n) {
+        console.log("EIL bridge connectors registered");
+    }
     console.log("\n⚠️  Next steps:");
     console.log("1. Set LayerZero peer addresses on other chains");
-    console.log("2. Register native bridge connectors (if using EIL)");
-    console.log("3. Test message sending/receiving");
+    console.log("2. Test message sending/receiving");
     console.log("=".repeat(60));
 
     // Update deployment info
@@ -144,4 +176,3 @@ main()
         console.error(error);
         process.exit(1);
     });
-

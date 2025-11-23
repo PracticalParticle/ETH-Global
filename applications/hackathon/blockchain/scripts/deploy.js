@@ -42,9 +42,63 @@ async function main() {
     const routerAddress = await router.getAddress();
     console.log("✅ HybridOrchestrationRouter deployed to:", routerAddress);
 
+    // ============ Deploy Libraries ============
+    console.log("\n📚 Deploying libraries...");
+    const libraries = {};
+    
+    // Deploy MessengerDefinitions library
+    try {
+        const MessengerDefinitions = await ethers.getContractFactory("MessengerDefinitions");
+        const messengerDefinitions = await MessengerDefinitions.deploy();
+        await messengerDefinitions.waitForDeployment();
+        const messengerDefinitionsAddress = await messengerDefinitions.getAddress();
+        libraries["applications/hackathon/blockchain/contracts/utils/MessengerDefinitions.sol:MessengerDefinitions"] = messengerDefinitionsAddress;
+        console.log("✅ MessengerDefinitions deployed to:", messengerDefinitionsAddress);
+    } catch (error) {
+        console.log("⚠️  MessengerDefinitions deployment:", error.message);
+    }
+    
+    // Deploy SecureOwnableDefinitions library
+    try {
+        const SecureOwnableDefinitions = await ethers.getContractFactory("SecureOwnableDefinitions");
+        const secureOwnableDefinitions = await SecureOwnableDefinitions.deploy();
+        await secureOwnableDefinitions.waitForDeployment();
+        const secureOwnableDefinitionsAddress = await secureOwnableDefinitions.getAddress();
+        libraries["contracts/core/access/lib/definitions/SecureOwnableDefinitions.sol:SecureOwnableDefinitions"] = secureOwnableDefinitionsAddress;
+        console.log("✅ SecureOwnableDefinitions deployed to:", secureOwnableDefinitionsAddress);
+    } catch (error) {
+        console.log("⚠️  SecureOwnableDefinitions deployment:", error.message);
+    }
+    
+    // Deploy StateAbstraction library
+    try {
+        const StateAbstraction = await ethers.getContractFactory("StateAbstraction");
+        const stateAbstraction = await StateAbstraction.deploy();
+        await stateAbstraction.waitForDeployment();
+        const stateAbstractionAddress = await stateAbstraction.getAddress();
+        libraries["contracts/core/base/lib/StateAbstraction.sol:StateAbstraction"] = stateAbstractionAddress;
+        console.log("✅ StateAbstraction deployed to:", stateAbstractionAddress);
+    } catch (error) {
+        console.log("⚠️  StateAbstraction deployment:", error.message);
+    }
+    
+    // Deploy StateAbstractionDefinitions library
+    try {
+        const StateAbstractionDefinitions = await ethers.getContractFactory("StateAbstractionDefinitions");
+        const stateAbstractionDefinitions = await StateAbstractionDefinitions.deploy();
+        await stateAbstractionDefinitions.waitForDeployment();
+        const stateAbstractionDefinitionsAddress = await stateAbstractionDefinitions.getAddress();
+        libraries["contracts/core/base/lib/definitions/StateAbstractionDefinitions.sol:StateAbstractionDefinitions"] = stateAbstractionDefinitionsAddress;
+        console.log("✅ StateAbstractionDefinitions deployed to:", stateAbstractionDefinitionsAddress);
+    } catch (error) {
+        console.log("⚠️  StateAbstractionDefinitions deployment:", error.message);
+    }
+
     // ============ Deploy EnterpriseCrossChainMessenger (Upgradeable) ============
     console.log("\n💬 Deploying EnterpriseCrossChainMessenger (Upgradeable Proxy)...");
-    const EnterpriseCrossChainMessenger = await ethers.getContractFactory("EnterpriseCrossChainMessenger");
+    const EnterpriseCrossChainMessenger = await ethers.getContractFactory("EnterpriseCrossChainMessenger", {
+        libraries: libraries
+    });
     
     // Deploy as upgradeable proxy
     const messenger = await upgrades.deployProxy(
@@ -52,7 +106,8 @@ async function main() {
         [], // Initialize will be called separately
         { 
             initializer: false, // We'll call initialize manually
-            kind: "uups"
+            kind: "uups",
+            unsafeAllowLinkedLibraries: true  // Allow external libraries
         }
     );
     await messenger.waitForDeployment();
@@ -74,6 +129,7 @@ async function main() {
             EnterpriseCrossChainMessenger: messengerAddress,
             Implementation: implementationAddress
         },
+        libraries: libraries,
         layerZero: {
             endpoint: LAYERZERO_ENDPOINT,
             delegate: LAYERZERO_DELEGATE
@@ -122,4 +178,3 @@ main()
         console.error(error);
         process.exit(1);
     });
-
