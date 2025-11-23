@@ -78,11 +78,11 @@ export function AddressInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className={`form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-zinc-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border ${
+        className={`glass-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-zinc-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 ${
           isValid
-            ? 'border-gray-300 dark:border-zinc-700'
-            : 'border-red-500 dark:border-red-500'
-        } bg-background-light dark:bg-zinc-900/50 focus:border-primary h-14 placeholder:text-zinc-500 dark:placeholder:text-gray-500 p-4 text-base font-normal leading-normal disabled:opacity-50 disabled:cursor-not-allowed`}
+            ? ''
+            : 'border-red-500 dark:border-red-500 focus:border-red-500 dark:focus:border-red-500'
+        } focus:border-primary h-14 placeholder:text-zinc-500 dark:placeholder:text-gray-500 p-4 text-base font-normal leading-normal disabled:opacity-50 disabled:cursor-not-allowed`}
       />
       {isResolving && (
         <div className="absolute inset-y-0 right-0 flex items-center pr-3">

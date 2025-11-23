@@ -79,9 +79,9 @@ export function CrossChainMessage() {
   }
 
   return (
-    <div className="relative flex h-auto w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark rounded-xl border border-gray-300 dark:border-zinc-700">
+    <div className="relative flex h-auto w-full max-w-lg mx-auto flex-col group/design-root overflow-x-hidden glass-card">
       {/* Header */}
-      <div className="flex items-center p-4 pb-2 justify-between border-b border-gray-300 dark:border-zinc-700">
+      <div className="flex items-center p-4 pb-2 justify-between border-b border-white/20 dark:border-white/10">
         <div className="flex size-10 shrink-0 items-center justify-start"></div>
         <h2 className="text-zinc-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center font-display">
           New Message
@@ -96,7 +96,7 @@ export function CrossChainMessage() {
             <p className="text-zinc-600 dark:text-gray-400 text-sm font-medium leading-normal pb-2 px-1">
               From
             </p>
-            <div className="flex items-center gap-4 bg-gray-200/50 dark:bg-zinc-800/50 p-4 min-h-[72px] justify-between rounded-xl">
+            <div className="flex items-center gap-4 glass-panel p-4 min-h-[72px] justify-between rounded-xl">
               <div className="flex items-center gap-4">
                 <div
                   className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12"
@@ -131,11 +131,13 @@ export function CrossChainMessage() {
             <p className="text-zinc-600 dark:text-gray-400 text-sm font-medium leading-normal pb-2 px-1">
               To
             </p>
-            <div className="flex flex-col md:flex-row gap-2">
-              <ChainSelector
-                selectedChainId={destinationChainId}
-                onChainSelect={setDestinationChainId}
-              />
+            <div className="flex flex-col gap-2">
+              <div className="w-full">
+                <ChainSelector
+                  selectedChainId={destinationChainId}
+                  onChainSelect={setDestinationChainId}
+                />
+              </div>
               <AddressInput
                 value={receiverAddress}
                 onChange={setReceiverAddress}
@@ -153,12 +155,12 @@ export function CrossChainMessage() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Write your encrypted message..."
-              className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-zinc-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-300 dark:border-zinc-700 bg-background-light dark:bg-zinc-900/50 focus:border-primary min-h-36 placeholder:text-zinc-500 dark:placeholder:text-gray-500 p-4 text-base font-normal leading-normal"
+              className="glass-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-zinc-900 dark:text-white min-h-36 placeholder:text-zinc-500 dark:placeholder:text-gray-500 p-4 text-base font-normal leading-normal"
             />
           </label>
 
           {/* Fee Estimation */}
-          <div className="bg-gray-200/50 dark:bg-zinc-800/50 rounded-xl p-4">
+          <div className="glass-panel rounded-xl p-4">
             <div className="flex justify-between gap-x-6 py-1">
               <p className="text-zinc-600 dark:text-gray-400 text-sm font-normal leading-normal">
                 Estimated Network Fee
@@ -176,7 +178,7 @@ export function CrossChainMessage() {
         <button
           onClick={handleSend}
           disabled={!isValid || isPending}
-          className="w-full bg-primary text-white font-bold py-4 px-5 rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors duration-200 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 dark:disabled:text-zinc-400 disabled:cursor-not-allowed disabled:shadow-none font-display"
+          className="w-full bg-primary text-white font-bold py-4 px-5 rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all duration-200 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 dark:disabled:text-zinc-400 disabled:cursor-not-allowed disabled:shadow-none font-display backdrop-blur-sm"
         >
           {isPending ? 'Sending...' : 'Send'}
         </button>

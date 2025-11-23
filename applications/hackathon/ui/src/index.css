@@ -11,10 +11,97 @@
     @apply min-h-screen bg-background-light dark:bg-background-dark text-zinc-900 dark:text-white;
     min-height: max(884px, 100dvh);
     font-family: 'Space Grotesk', sans-serif;
+    background-image: 
+      radial-gradient(at 27% 37%, rgba(120, 119, 198, 0.08) 0px, transparent 50%),
+      radial-gradient(at 97% 21%, rgba(120, 119, 198, 0.06) 0px, transparent 50%),
+      radial-gradient(at 52% 99%, rgba(120, 119, 198, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image: 
+      radial-gradient(at 27% 37%, rgba(120, 119, 198, 0.12) 0px, transparent 50%),
+      radial-gradient(at 97% 21%, rgba(120, 119, 198, 0.08) 0px, transparent 50%),
+      radial-gradient(at 52% 99%, rgba(120, 119, 198, 0.06) 0px, transparent 50%);
   }
   
   #root {
     @apply w-full min-h-screen;
+  }
+}
+
+@layer components {
+  /* Glass Card - Main glass panel component */
+  .glass-card {
+    @apply backdrop-blur-md bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-xl shadow-lg;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    transition: all 0.3s ease;
+  }
+
+  .dark .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  }
+
+  /* Removed hover effects from glass-card */
+
+  /* Glass Panel - Lighter glass effect */
+  .glass-panel {
+    @apply backdrop-blur-sm bg-white/5 border border-white/15 rounded-lg;
+    transition: all 0.2s ease;
+  }
+
+  .dark .glass-panel {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Removed hover effects from glass-panel */
+
+  /* Glass Input - Input fields with glass effect */
+  .glass-input {
+    @apply backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-xl;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50;
+    @apply transition-all duration-200;
+  }
+
+  .glass-input:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .dark .glass-input:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  /* Glass Button - Buttons with glass effect */
+  .glass-button {
+    @apply backdrop-blur-md bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10;
+    @apply hover:bg-white/15 dark:hover:bg-white/8 hover:border-white/25 dark:hover:border-white/12;
+    @apply transition-all duration-200;
+  }
+
+  /* Glass Container - Main container with glass background */
+  .glass-container {
+    @apply backdrop-blur-lg bg-white/5 dark:bg-black/20 border border-white/10 dark:border-white/5 rounded-2xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@layer utilities {
+  /* Glass text effects */
+  .glass-text {
+    @apply text-zinc-900 dark:text-white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Subtle glass shadow */
+  .glass-shadow {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .glass-shadow {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 }
 
