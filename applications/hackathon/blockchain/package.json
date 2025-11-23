@@ -9,6 +9,8 @@
     "deploy": "hardhat run scripts/deploy.js",
     "initialize": "hardhat run scripts/initialize.js",
     "set-peers": "hardhat run scripts/setLayerZeroPeers.js",
+    "sanity": "hardhat run scripts/sanity/run-tests.js",
+    "sanity:cancellation": "hardhat run scripts/sanity/run-tests.js --network sepolia",
     "clean": "hardhat clean"
   },
   "keywords": [
