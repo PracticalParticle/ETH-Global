@@ -18,7 +18,7 @@ import "./interfaces/IEILIntegration.sol";
 import "./interfaces/ILayerZeroIntegration.sol";
 
 /**
- * @title EnterpriseCrossChainManager
+ * @title EnterpriseCrossChainAssetManager
  * @notice Complete tri-protocol integration: Bloxchain + EIL + LayerZero
  * @dev Enterprise-grade cross-chain system with:
  *      - Multi-signature workflows (Bloxchain)
@@ -30,7 +30,7 @@ import "./interfaces/ILayerZeroIntegration.sol";
  * 
  * @custom:security-contact security@particlecrypto.com
  */
-contract EnterpriseCrossChainManager is SecureOwnable {
+contract EnterpriseCrossChainAssetManager is SecureOwnable {
     using SafeERC20 for IERC20;
     using StateAbstraction for StateAbstraction.SecureOperationState;
     using MessageRequirements for MessageRequirements.Requirements;
