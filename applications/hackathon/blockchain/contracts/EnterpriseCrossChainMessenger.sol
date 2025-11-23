@@ -110,11 +110,11 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
     
     /**
      * @notice Initialize the contract
+     * @dev Time lock period is hardcoded to 5 minutes (300 seconds)
+     *      Event forwarder is disabled (address(0))
      * @param initialOwner Initial owner address
      * @param broadcaster Broadcaster address
      * @param recovery Recovery address
-     * @param timeLockPeriodSec Time lock period in seconds
-     * @param eventForwarder Event forwarder address
      * @param _router Hybrid orchestration router
      * @param _chainRegistry Chain registry
      */
@@ -122,18 +122,18 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         address initialOwner,
         address broadcaster,
         address recovery,
-        uint256 timeLockPeriodSec,
-        address eventForwarder,
         address _router,
         address _chainRegistry
     ) public initializer {
-        // Initialize SecureOwnable
+        // Initialize SecureOwnable with hardcoded values
+        // Time lock period: 5 minutes (300 seconds)
+        // Event forwarder: disabled (address(0))
         SecureOwnable.initialize(
             initialOwner,
             broadcaster,
             recovery,
-            timeLockPeriodSec,
-            eventForwarder
+            300, // 5 minutes in seconds
+            address(0) // Event forwarder disabled
         );
         
         // Validate and set integration contracts
