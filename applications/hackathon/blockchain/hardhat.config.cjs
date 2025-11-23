@@ -63,3 +63,4 @@ module.exports = {
     // Allow imports from parent directories (for Bloxchain contracts)
     allowUnlimitedContractSize: true
 };
+

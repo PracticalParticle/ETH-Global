@@ -9,6 +9,8 @@
     "deploy": "hardhat run scripts/deploy.js",
     "initialize": "hardhat run scripts/initialize.js",
     "set-peers": "hardhat run scripts/setLayerZeroPeers.js",
+    "sanity": "hardhat run scripts/sanity/run-tests.js",
+    "sanity:cancellation": "hardhat run scripts/sanity/run-tests.js --network sepolia",
     "clean": "hardhat clean"
   },
   "keywords": [
@@ -30,7 +32,7 @@
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
     "@nomicfoundation/hardhat-ethers": "^3.1.2",
     "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
-    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
     "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "@typechain/ethers-v6": "^0.5.1",
@@ -41,7 +43,7 @@
     "chai": "^4.5.0",
     "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
-    "hardhat": "^2.27.0",
+    "hardhat": "^3.0.0",
     "hardhat-gas-reporter": "^1.0.10",
     "solidity-coverage": "^0.8.16",
     "ts-node": "^10.9.2",
