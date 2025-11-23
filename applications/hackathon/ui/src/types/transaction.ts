@@ -58,5 +58,8 @@ export interface PendingTransaction extends TransactionRecord {
   isExpired: boolean
   canCancel: boolean
   canApprove: boolean
+  canSignMetaTx?: boolean
+  hasSignedMetaTx?: boolean
+  signedMetaTx?: unknown // MetaTransaction from SDK
 }
 

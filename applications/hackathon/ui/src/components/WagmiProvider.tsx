@@ -6,7 +6,19 @@ import { injected } from 'wagmi/connectors';
 import { LAYERZERO_CHAINS } from '../lib/chains';
 import type { Chain } from 'wagmi/chains';
 
-// Create a new QueryClient instance with conservative defaults
+// Create transport with retry logic and timeout
+function createTransportWithRetry() {
+  return http(undefined, {
+    timeout: 30_000, // 30 second timeout
+    retryCount: 3,
+    retryDelay: 1000,
+    fetchOptions: {
+      signal: AbortSignal.timeout(30_000),
+    },
+  });
+}
+
+// Create a new QueryClient instance with retry logic
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -14,10 +26,12 @@ const queryClient = new QueryClient({
       gcTime: 5 * 60_000, // keep in cache for 5 minutes
       refetchOnWindowFocus: false,
       refetchOnReconnect: 'always',
-      retry: false,
+      retry: 3, // Retry failed requests
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
-      retry: false,
+      retry: 2, // Retry failed mutations
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
   },
 });
@@ -25,9 +39,9 @@ const queryClient = new QueryClient({
 // Use LayerZero chains directly - TypeScript requires at least one chain
 const supportedChains = LAYERZERO_CHAINS as readonly [Chain, ...Chain[]];
 
-// Create transports for all supported chains
+// Create transports for all supported chains with retry logic
 const transports = Object.fromEntries(
-  supportedChains.map((chain) => [chain.id, http()])
+  supportedChains.map((chain) => [chain.id, createTransportWithRetry()])
 );
 
 // Configure wagmi with supported chains
