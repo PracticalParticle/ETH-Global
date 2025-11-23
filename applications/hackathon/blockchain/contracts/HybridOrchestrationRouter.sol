@@ -245,7 +245,9 @@ contract HybridOrchestrationRouter is OApp {
      */
     function _buildExecutorOptions() internal pure returns (bytes memory) {
         // Simplified - in production, use proper OptionsBuilder
-        return abi.encodePacked(uint16(1), uint16(200000)); // executor option
+        // Executor option: optionType (uint16) = 1, gasLimit (uint128) = 200000
+        // Note: Using uint128 for gas limit as per LayerZero v2 spec
+        return abi.encodePacked(uint16(1), uint128(200000)); // executor option
     }
     
     /**
