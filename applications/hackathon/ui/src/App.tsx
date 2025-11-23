@@ -50,21 +50,10 @@ function App() {
           </div>
         </div>
 
-        {/* Connection Prompt */}
-        {!isConnected && (
-          <div className="glass-panel p-6 text-center mb-6 max-w-lg mx-auto">
-            <p className="text-zinc-600 dark:text-gray-400">
-              Connect your wallet to get started
-            </p>
-          </div>
-        )}
-
-        {/* Cross Chain Message Component */}
-        {isConnected && (
-          <div className="mt-6">
-            <CrossChainMessage />
-          </div>
-        )}
+        {/* Cross Chain Message Component - Always visible */}
+        <div className="mt-6">
+          <CrossChainMessage />
+        </div>
       </div>
     </div>
   )
