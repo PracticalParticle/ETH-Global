@@ -7,15 +7,19 @@ import { PresetSelector, PRESETS } from './PresetSelector'
 import { RequirementsModal } from './RequirementsModal'
 import { RouterSelectionDisplay } from './RouterSelectionDisplay'
 import { TransactionLifecycle } from './TransactionLifecycle'
+import { ErrorBoundary } from './ErrorBoundary'
 import { getNativeTokenSymbol, LAYERZERO_EIDS } from '../lib/chains'
 import { MessageRequirements, SecurityLevel } from '../types/transaction'
 import { getRouterSelection } from '../lib/routerSelection'
-import { prepareSendMessageRequest, prepareCancelMessage } from '../lib/messengerContract'
 import { getContractAddress } from '../lib/contracts'
 import { useMessageTransactions } from '../hooks/useMessageTransactions'
+import { useMessengerOperations } from '../hooks/useMessengerOperations'
+import { handleContractError } from '../lib/errorHandler'
 
 // Default native bridge chains (should be fetched from contract in production)
-const DEFAULT_NATIVE_BRIDGE_CHAINS = [1, 42161, 10, 8453] // Ethereum, Arbitrum, Optimism, Base
+// Currently supports Arbitrum via EIL bridge connectors
+// Based on ADDRESSES.md: EIL bridge connectors deployed for Arbitrum Sepolia
+const DEFAULT_NATIVE_BRIDGE_CHAINS = [421614] // Arbitrum Sepolia (EIL bridge available)
 
 export function CrossChainMessage() {
   const { address, chainId } = useAccount()
@@ -85,7 +89,17 @@ export function CrossChainMessage() {
   }, [destinationChainId, requirements])
 
   // Transaction management
-  const { refreshTransactions } = useMessageTransactions(contractAddress)
+  const { refreshTransactions, addTransaction } = useMessageTransactions(contractAddress)
+
+  // Messenger operations using SDK
+  const {
+    sendMessageRequest,
+    cancelMessage,
+    signMetaTransaction,
+    broadcastMetaTransaction,
+    isLoading: operationsLoading,
+    error: operationsError,
+  } = useMessengerOperations(contractAddress)
 
   // Set default destination chain
   useEffect(() => {
@@ -130,8 +144,13 @@ export function CrossChainMessage() {
   }, [error, successMessage])
 
   const handleSend = async () => {
-    if (!destinationChainId || !receiverAddress || !message || !contractAddress) {
-      setError('Please fill in all fields')
+    if (!contractAddress) {
+      setError('Contract address not found for this network')
+      return
+    }
+
+    if (!destinationChainId) {
+      setError('Please select a destination chain')
       return
     }
 
@@ -148,35 +167,26 @@ export function CrossChainMessage() {
     try {
       setIsPending(true)
       setError(null)
+      setSuccessMessage(null)
 
-      // Prepare transaction
-      const tx = prepareSendMessageRequest(contractAddress, {
-        targetChainId: destinationChainId,
-        payload: message,
-        requirements,
-      })
+      // Use SDK to send message request
+      const txId = await sendMessageRequest(
+        destinationChainId,
+        message,
+        requirements
+      )
 
-      // Send transaction
-      const hash = await walletClient.sendTransaction({
-        to: tx.to,
-        data: tx.data,
-        value: tx.value,
-      })
-
-      // Wait for transaction receipt
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        
-        // Decode transaction ID from receipt logs (simplified - in production, decode properly)
-        // For now, we'll need to fetch the transaction from events or use a different approach
-        setSuccessMessage(`Transaction submitted! Hash: ${hash.slice(0, 10)}...`)
-        
-        // Refresh transactions
-        refreshTransactions()
-      }
+      setSuccessMessage(`Message request created! Transaction ID: ${txId.toString()}`)
+      
+      // Add transaction to monitoring list
+      addTransaction(txId)
+      
+      // Refresh transactions
+      refreshTransactions()
     } catch (err: unknown) {
       console.error('Error sending message:', err)
-      setError(err instanceof Error ? err.message : 'Failed to send message')
+      const errorInfo = handleContractError(err)
+      setError(errorInfo.userMessage)
     } finally {
       setIsPending(false)
     }
@@ -191,35 +201,57 @@ export function CrossChainMessage() {
     try {
       setIsPending(true)
       setError(null)
+      setSuccessMessage(null)
 
-      const tx = prepareCancelMessage(contractAddress, { txId })
-      const hash = await walletClient.sendTransaction({
-        to: tx.to,
-        data: tx.data,
-        value: tx.value,
-      })
-
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash })
-        setSuccessMessage('Transaction cancelled successfully')
-        refreshTransactions()
-      }
+      await cancelMessage(txId)
+      
+      setSuccessMessage('Transaction cancelled successfully')
+      refreshTransactions()
     } catch (err: unknown) {
       console.error('Error cancelling transaction:', err)
-      setError(err instanceof Error ? err.message : 'Failed to cancel transaction')
+      const errorInfo = handleContractError(err)
+      setError(errorInfo.userMessage)
     } finally {
       setIsPending(false)
     }
   }
 
-  const handleApprove = async (_txId: bigint) => {
-    // Meta-transaction approval is complex and requires:
-    // 1. Owner to sign the meta-transaction
-    // 2. Broadcaster to execute with routing fees
-    // This is a placeholder - full implementation would require meta-transaction signing flow
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void _txId
-    setError('Meta-transaction approval not yet implemented. Please use direct approval.')
+  const handleSignMetaTx = async (txId: bigint) => {
+    try {
+      setIsPending(true)
+      setError(null)
+      setSuccessMessage(null)
+
+      await signMetaTransaction(txId)
+      
+      setSuccessMessage('Meta-transaction signed and stored. Ready for broadcast.')
+      refreshTransactions()
+    } catch (err: unknown) {
+      console.error('Error signing meta-transaction:', err)
+      const errorInfo = handleContractError(err)
+      setError(errorInfo.userMessage)
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  const handleBroadcast = async (txId: bigint) => {
+    try {
+      setIsPending(true)
+      setError(null)
+      setSuccessMessage(null)
+
+      await broadcastMetaTransaction(txId, 0n) // TODO: Calculate routing fee
+      
+      setSuccessMessage('Meta-transaction broadcasted successfully')
+      refreshTransactions()
+    } catch (err: unknown) {
+      console.error('Error broadcasting meta-transaction:', err)
+      const errorInfo = handleContractError(err)
+      setError(errorInfo.userMessage)
+    } finally {
+      setIsPending(false)
+    }
   }
 
   const isValid = !!address && 
@@ -228,7 +260,8 @@ export function CrossChainMessage() {
     isAddress(receiverAddress) && 
     !!message &&
     !!contractAddress &&
-    !isPending
+    !isPending &&
+    !operationsLoading
 
   const getIdenticonUrl = (addr: string) => {
     return `https://api.dicebear.com/7.x/identicon/svg?seed=${addr}`
@@ -239,9 +272,17 @@ export function CrossChainMessage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Main Message Form */}
-      <div className="relative flex h-auto w-full max-w-lg mx-auto flex-col group/design-root overflow-x-hidden glass-card">
+    <ErrorBoundary>
+      <div className="space-y-6">
+        {/* Operations Error Display */}
+        {operationsError && (
+          <div className="w-full max-w-lg mx-auto glass-panel p-3 rounded-xl border border-red-500/50 bg-red-500/10">
+            <p className="text-red-600 dark:text-red-400 text-sm">{operationsError}</p>
+          </div>
+        )}
+
+        {/* Main Message Form - Primary */}
+      <div className="relative flex h-auto w-full max-w-lg mx-auto flex-col group/design-root overflow-x-hidden glass-card shadow-lg">
         {/* Header */}
         <div className="flex items-center p-4 pb-2 justify-between border-b border-white/20 dark:border-white/10">
           <div className="flex size-10 shrink-0 items-center justify-start"></div>
@@ -416,41 +457,44 @@ export function CrossChainMessage() {
           </div>
         </main>
 
-        {/* Send Button */}
+        {/* Send Button - Primary Action */}
         <div className="px-4 pb-4 pt-2">
           <button
             onClick={handleSend}
             disabled={!isValid || isPending}
-            className="w-full bg-primary text-white font-bold py-4 px-5 rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all duration-200 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 dark:disabled:text-zinc-400 disabled:cursor-not-allowed disabled:shadow-none font-display backdrop-blur-sm flex items-center justify-center gap-2"
+            className="w-full bg-primary text-white font-bold py-4 px-5 rounded-xl shadow-lg shadow-primary/40 hover:bg-primary/90 hover:shadow-primary/50 transition-all duration-200 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 dark:disabled:text-zinc-400 disabled:cursor-not-allowed disabled:shadow-none font-display backdrop-blur-sm flex items-center justify-center gap-2 text-base"
           >
             {isPending && (
               <span className="material-symbols-outlined animate-spin !text-xl">
                 refresh
               </span>
             )}
-            {!address ? 'Connect Wallet to Send' : isPending ? 'Sending...' : 'Request Message'}
+            {!address ? 'Connect Wallet to Send' : (isPending || operationsLoading) ? 'Processing...' : 'Send New Message'}
           </button>
         </div>
       </div>
 
-      {/* Transaction Lifecycle */}
-      {contractAddress && (
-        <div className="w-full max-w-lg mx-auto">
-          <TransactionLifecycle
-            contractAddress={contractAddress}
-            onCancel={handleCancel}
-            onApprove={handleApprove}
-          />
-        </div>
-      )}
+        {/* Transaction Lifecycle */}
+        {contractAddress && (
+          <div className="w-full max-w-lg mx-auto">
+            <TransactionLifecycle
+              contractAddress={contractAddress}
+              onCancel={handleCancel}
+              onApprove={handleBroadcast}
+              onSignMetaTx={handleSignMetaTx}
+              onBroadcast={handleBroadcast}
+            />
+          </div>
+        )}
 
-      {/* Requirements Modal */}
-      <RequirementsModal
-        isOpen={isRequirementsModalOpen}
-        onClose={() => setIsRequirementsModalOpen(false)}
-        requirements={requirements}
-        onChange={handleRequirementsChange}
-      />
-    </div>
+        {/* Requirements Modal */}
+        <RequirementsModal
+          isOpen={isRequirementsModalOpen}
+          onClose={() => setIsRequirementsModalOpen(false)}
+          requirements={requirements}
+          onChange={handleRequirementsChange}
+        />
+      </div>
+    </ErrorBoundary>
   )
 }

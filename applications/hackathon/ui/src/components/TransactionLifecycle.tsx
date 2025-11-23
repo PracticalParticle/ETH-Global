@@ -5,17 +5,22 @@
 import { useState, useEffect } from 'react'
 import { TransactionStatus } from '../types/transaction'
 import { useMessageTransactions } from '../hooks/useMessageTransactions'
+import { useMessengerOperations } from '../hooks/useMessengerOperations'
 
 interface TransactionLifecycleProps {
   contractAddress?: string
   onCancel?: (txId: bigint) => void
   onApprove?: (txId: bigint) => void
+  onSignMetaTx?: (txId: bigint) => void
+  onBroadcast?: (txId: bigint) => void
 }
 
 export function TransactionLifecycle({
   contractAddress,
   onCancel,
   onApprove,
+  onSignMetaTx,
+  onBroadcast,
 }: TransactionLifecycleProps) {
   const {
     transactions,
@@ -25,6 +30,16 @@ export function TransactionLifecycle({
     isBroadcaster,
     refreshTransactions,
   } = useMessageTransactions(contractAddress as `0x${string}` | undefined)
+
+  const {
+    signMetaTransaction,
+    broadcastMetaTransaction,
+    isLoading: operationsLoading,
+    error: operationsError,
+  } = useMessengerOperations(contractAddress as `0x${string}` | undefined)
+
+  const [signingTxId, setSigningTxId] = useState<bigint | null>(null)
+  const [broadcastingTxId, setBroadcastingTxId] = useState<bigint | null>(null)
 
   // Real-time countdown state
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000))
@@ -195,29 +210,98 @@ export function TransactionLifecycle({
             )}
           </div>
 
+          {/* Signed Meta-Tx Indicator */}
+          {tx.hasSignedMetaTx && (
+            <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/50 rounded text-blue-600 dark:text-blue-400 text-xs">
+              ✓ Meta-transaction signed and ready for broadcast
+            </div>
+          )}
+
+          {/* Operations Error */}
+          {operationsError && (
+            <div className="mb-3 p-2 bg-red-500/10 border border-red-500/50 rounded text-red-600 dark:text-red-400 text-xs">
+              {operationsError}
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {tx.canCancel && (
               <button
-                onClick={() => onCancel?.(tx.txId)}
-                disabled={isLoading}
+                onClick={async () => {
+                  if (onCancel) {
+                    onCancel(tx.txId)
+                  }
+                }}
+                disabled={isLoading || operationsLoading}
                 className="px-3 py-1.5 text-xs font-medium bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
             )}
-            {tx.canApprove && (
+            
+            {/* Sign Meta-Tx Button (Owner) */}
+            {isOwner && tx.status === TransactionStatus.PENDING && !tx.isExpired && !tx.hasSignedMetaTx && (
+              <button
+                onClick={async () => {
+                  try {
+                    setSigningTxId(tx.txId)
+                    await signMetaTransaction(tx.txId)
+                    if (onSignMetaTx) {
+                      onSignMetaTx(tx.txId)
+                    }
+                    refreshTransactions()
+                  } catch (error) {
+                    console.error('Failed to sign meta-transaction:', error)
+                  } finally {
+                    setSigningTxId(null)
+                  }
+                }}
+                disabled={isLoading || operationsLoading || signingTxId === tx.txId}
+                className="px-3 py-1.5 text-xs font-medium bg-purple-500/20 hover:bg-purple-500/30 text-purple-600 dark:text-purple-400 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {signingTxId === tx.txId ? 'Signing...' : 'Sign Meta-Tx'}
+              </button>
+            )}
+
+            {/* Broadcast Button (Broadcaster) */}
+            {isBroadcaster && tx.status === TransactionStatus.PENDING && !tx.isExpired && tx.hasSignedMetaTx && (
+              <button
+                onClick={async () => {
+                  try {
+                    setBroadcastingTxId(tx.txId)
+                    await broadcastMetaTransaction(tx.txId, 0n) // TODO: Calculate routing fee
+                    if (onBroadcast) {
+                      onBroadcast(tx.txId)
+                    }
+                    refreshTransactions()
+                  } catch (error) {
+                    console.error('Failed to broadcast meta-transaction:', error)
+                  } finally {
+                    setBroadcastingTxId(null)
+                  }
+                }}
+                disabled={isLoading || operationsLoading || broadcastingTxId === tx.txId}
+                className="px-3 py-1.5 text-xs font-medium bg-green-500/20 hover:bg-green-500/30 text-green-600 dark:text-green-400 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {broadcastingTxId === tx.txId ? 'Broadcasting...' : 'Broadcast'}
+              </button>
+            )}
+
+            {/* Legacy Approve Button (for backward compatibility) */}
+            {tx.canApprove && !tx.hasSignedMetaTx && (
               <button
                 onClick={() => onApprove?.(tx.txId)}
-                disabled={isLoading}
+                disabled={isLoading || operationsLoading}
                 className="px-3 py-1.5 text-xs font-medium bg-primary/20 hover:bg-primary/30 text-primary rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Approve
               </button>
             )}
-            {!tx.canCancel && !tx.canApprove && (
+
+            {!tx.canCancel && !tx.canApprove && !tx.hasSignedMetaTx && (
               <p className="text-xs text-zinc-500 dark:text-gray-400">
-                {isOwner ? 'Waiting for broadcaster approval' : isBroadcaster ? 'Waiting for time lock' : 'No actions available'}
+                {isOwner ? 'Waiting for meta-transaction signature' : isBroadcaster ? 'Waiting for signed meta-transaction' : 'No actions available'}
               </p>
             )}
           </div>

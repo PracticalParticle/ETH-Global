@@ -5,13 +5,14 @@
 import { usePublicClient, useWalletClient } from 'wagmi'
 import { Address } from 'viem'
 
-// Contract addresses - should be configured per network
-// These can be loaded from environment variables or deployment files
+// Contract addresses - configured from ADDRESSES.md
+// These addresses are for the Enterprise Cross-Chain Messaging System
 export const CONTRACT_ADDRESSES: Record<number, Address> = {
-  // Add deployed contract addresses per chain ID
-  // Example:
-  // 1: '0x...' as Address, // Ethereum Mainnet
-  // 11155111: '0x...' as Address, // Sepolia
+  // Ethereum Sepolia Testnet
+  11155111: '0xc996252B45807D8dDa6531C936c30ACc456602fA' as Address, // EnterpriseCrossChainMessenger
+  
+  // Arbitrum Sepolia Testnet
+  421614: '0x6F30806b708412E0D44C1A59290b3583A03DB099' as Address, // EnterpriseCrossChainMessenger
 }
 
 // Get contract address for current chain
