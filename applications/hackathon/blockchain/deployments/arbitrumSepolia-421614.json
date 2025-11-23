@@ -1,0 +1,37 @@
+{
+  "network": "arbitrumSepolia",
+  "chainId": "421614",
+  "deployer": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a",
+  "contracts": {
+    "ChainRegistry": "0x8721414fC7d5149Ea42385d5c93D24712fAF2A10",
+    "HybridOrchestrationRouter": "0xd0056410C4725cFAD258805966e717986b52F98d",
+    "EnterpriseCrossChainMessenger": "0x6F30806b708412E0D44C1A59290b3583A03DB099",
+    "Implementation": "0xfE86eC9C93176B9F4e241c9849e73a1Ef842A45B"
+  },
+  "libraries": {
+    "applications/hackathon/blockchain/contracts/utils/MessengerDefinitions.sol:MessengerDefinitions": "0xDA63923333F4db51950f7B396f6DE3627fDF2Fa3",
+    "contracts/core/access/lib/definitions/SecureOwnableDefinitions.sol:SecureOwnableDefinitions": "0x628E146782ff3D031b46095CcE6C04024bBdD5c5",
+    "contracts/core/base/lib/StateAbstraction.sol:StateAbstraction": "0xe312c2b95b2255e2Bf88c3B4CD37Ed85eEF124AE",
+    "contracts/core/base/lib/definitions/StateAbstractionDefinitions.sol:StateAbstractionDefinitions": "0xAab14D6195CBbCB7d8752B1Ab5Bad3d7e73Ab14F"
+  },
+  "layerZero": {
+    "endpoint": "0x6EDCE65403992e310A62460808c4b910D972f10f",
+    "delegate": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a"
+  },
+  "timestamp": "2025-11-23T08:40:06.953Z",
+  "initialized": true,
+  "initialization": {
+    "owner": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a",
+    "broadcaster": "0xc4d7ccabc561c7d9360481404da8a80886a49277",
+    "recovery": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a",
+    "timestamp": "2025-11-23T08:40:29.275Z"
+  },
+  "layerZeroPeers": {
+    "40161": {
+      "peerRouterAddress": "0xdAe6ACa789552e6f9C1d8931b7af1a596823fC93",
+      "peerAddressBytes32": "0x000000000000000000000000dae6aca789552e6f9c1d8931b7af1a596823fc93",
+      "setAt": "2025-11-23T08:41:36.568Z",
+      "txHash": "0xd4837bc6692fc9ee60d771af46636beb32c643c89c17891ab13828fca0f7a1ee"
+    }
+  }
+}

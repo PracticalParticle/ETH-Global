@@ -1,0 +1,44 @@
+{
+  "network": "sepolia",
+  "chainId": "11155111",
+  "deployer": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a",
+  "contracts": {
+    "ChainRegistry": "0x1Dd72CE024CFf6554eBfC01d8aFb43F106e98A46",
+    "HybridOrchestrationRouter": "0xdAe6ACa789552e6f9C1d8931b7af1a596823fC93",
+    "EnterpriseCrossChainMessenger": "0xc996252B45807D8dDa6531C936c30ACc456602fA",
+    "Implementation": "0x2c9Afb22539160A2180F61617E93B50bb7918b0A"
+  },
+  "libraries": {
+    "applications/hackathon/blockchain/contracts/utils/MessengerDefinitions.sol:MessengerDefinitions": "0x9d215755339F62772517989d6f4e254E24Fc799A",
+    "contracts/core/access/lib/definitions/SecureOwnableDefinitions.sol:SecureOwnableDefinitions": "0x7205c4060E5674A5B2788E784004431F0eE42BcF",
+    "contracts/core/base/lib/StateAbstraction.sol:StateAbstraction": "0xEd2FBA5061911d6ee5543052004A38936385beF3",
+    "contracts/core/base/lib/definitions/StateAbstractionDefinitions.sol:StateAbstractionDefinitions": "0xc4388eA0ccdBE9FBF54fc60148C63BEa6E339D34"
+  },
+  "layerZero": {
+    "endpoint": "0x6EDCE65403992e310A62460808c4b910D972f10f",
+    "delegate": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a"
+  },
+  "timestamp": "2025-11-23T08:38:12.399Z",
+  "eilBridge": {
+    "arbitrumSepolia": {
+      "chainId": 421614,
+      "l1Bridge": "0x2Efeb9A8aa5d20D50f05Be721cCb64332dE2A6a2",
+      "l2Bridge": "0xDFa250f671A60B64dD3cD625AD2056b9B4A9124F"
+    }
+  },
+  "initialized": true,
+  "initialization": {
+    "owner": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a",
+    "broadcaster": "0xc4d7ccabc561c7d9360481404da8a80886a49277",
+    "recovery": "0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a",
+    "timestamp": "2025-11-23T08:39:25.374Z"
+  },
+  "layerZeroPeers": {
+    "40231": {
+      "peerRouterAddress": "0xd0056410C4725cFAD258805966e717986b52F98d",
+      "peerAddressBytes32": "0x000000000000000000000000d0056410c4725cfad258805966e717986b52f98d",
+      "setAt": "2025-11-23T08:41:25.259Z",
+      "txHash": "0xce96c8a71580cb977f700182439d1fd1e8bce148b231a4815c3e1a732b13fad9"
+    }
+  }
+}
