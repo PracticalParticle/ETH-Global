@@ -190,9 +190,115 @@ Both testnets use the same EndpointV2 address: `0x6EDCE65403992e310A62460808c4b9
 
 ---
 
-**Last Updated:** [Date will be updated when addresses are added]  
+## 🏗️ Deployed Hackathon Contracts
+
+### ✅ Status: All Contracts Deployed and Initialized
+
+All contracts for the Enterprise Cross-Chain Messaging System have been successfully deployed and initialized on both testnet networks.
+
+---
+
+### Ethereum Sepolia Testnet
+
+**Chain ID:** `11155111`  
+**Deployer:** `0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a`  
+**Deployed:** 2025-11-23 (Redeployed)
+
+#### Core Contracts
+
+| Contract | Address | Status |
+|----------|---------|--------|
+| **ChainRegistry** | `0x1Dd72CE024CFf6554eBfC01d8aFb43F106e98A46` | ✅ Deployed |
+| **HybridOrchestrationRouter** | `0xdAe6ACa789552e6f9C1d8931b7af1a596823fC93` | ✅ Deployed |
+| **EnterpriseCrossChainMessenger** | `0xc996252B45807D8dDa6531C936c30ACc456602fA` | ✅ Deployed & Initialized |
+| **Implementation** (UUPS) | `0x2c9Afb22539160A2180F61617E93B50bb7918b0A` | ✅ Deployed |
+
+#### Libraries
+
+| Library | Address | Status |
+|---------|---------|--------|
+| **MessengerDefinitions** | `0x9d215755339F62772517989d6f4e254E24Fc799A` | ✅ Deployed |
+| **SecureOwnableDefinitions** | `0x7205c4060E5674A5B2788E784004431F0eE42BcF` | ✅ Deployed |
+| **StateAbstraction** | `0xEd2FBA5061911d6ee5543052004A38936385beF3` | ✅ Deployed |
+| **StateAbstractionDefinitions** | `0xc4388eA0ccdBE9FBF54fc60148C63BEa6E339D34` | ✅ Deployed |
+
+#### Initialization
+
+- **Owner:** `0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a`
+- **Broadcaster:** `0xc4d7ccabc561c7d9360481404da8a80886a49277` ✅
+- **Recovery:** `0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a`
+- **Initialized:** ✅ 2025-11-23
+
+#### EIL Bridge Registration
+
+- **Arbitrum Sepolia Chain ID:** `421614`
+- **L1 Bridge Connector:** `0x2Efeb9A8aa5d20D50f05Be721cCb64332dE2A6a2` ✅ Registered
+- **L2 Bridge Connector:** `0xDFa250f671A60B64dD3cD625AD2056b9B4A9124F` ✅ Registered
+
+---
+
+### Arbitrum Sepolia Testnet
+
+**Chain ID:** `421614`  
+**Deployer:** `0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a`  
+**Deployed:** 2025-11-23 (Redeployed)
+
+#### Core Contracts
+
+| Contract | Address | Status |
+|----------|---------|--------|
+| **ChainRegistry** | `0x8721414fC7d5149Ea42385d5c93D24712fAF2A10` | ✅ Deployed |
+| **HybridOrchestrationRouter** | `0xd0056410C4725cFAD258805966e717986b52F98d` | ✅ Deployed |
+| **EnterpriseCrossChainMessenger** | `0x6F30806b708412E0D44C1A59290b3583A03DB099` | ✅ Deployed & Initialized |
+| **Implementation** (UUPS) | `0xfE86eC9C93176B9F4e241c9849e73a1Ef842A45B` | ✅ Deployed |
+
+#### Libraries
+
+| Library | Address | Status |
+|---------|---------|--------|
+| **MessengerDefinitions** | `0xDA63923333F4db51950f7B396f6DE3627fDF2Fa3` | ✅ Deployed |
+| **SecureOwnableDefinitions** | `0x628E146782ff3D031b46095CcE6C04024bBdD5c5` | ✅ Deployed |
+| **StateAbstraction** | `0xe312c2b95b2255e2Bf88c3B4CD37Ed85eEF124AE` | ✅ Deployed |
+| **StateAbstractionDefinitions** | `0xAab14D6195CBbCB7d8752B1Ab5Bad3d7e73Ab14F` | ✅ Deployed |
+
+#### Initialization
+
+- **Owner:** `0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a`
+- **Broadcaster:** `0xc4d7ccabc561c7d9360481404da8a80886a49277` ✅
+- **Recovery:** `0xcC88A0a9ceE5FDc446ED28c94f6D646E40e1193a`
+- **Initialized:** ✅ 2025-11-23
+
+---
+
+## 🔗 Cross-Chain Configuration
+
+### LayerZero Peer Addresses
+
+✅ **Status: Configured** - Peer addresses have been set on both routers.
+
+**Ethereum Sepolia Router (`0xdAe6ACa789552e6f9C1d8931b7af1a596823fC93`):**
+- ✅ Peer for Arbitrum Sepolia (EID: 40231): `0xd0056410C4725cFAD258805966e717986b52F98d`
+- Set at: 2025-11-23
+- Transaction: `0xce96c8a71580cb977f700182439d1fd1e8bce148b231a4815c3e1a732b13fad9`
+
+**Arbitrum Sepolia Router (`0xd0056410C4725cFAD258805966e717986b52F98d`):**
+- ✅ Peer for Ethereum Sepolia (EID: 40161): `0xdAe6ACa789552e6f9C1d8931b7af1a596823fC93`
+- Set at: 2025-11-23
+- Transaction: `0xd4837bc6692fc9ee60d771af46636beb32c643c89c17891ab13828fca0f7a1ee`
+
+### Chain Registry
+
+Both networks have registered each other:
+- ✅ Ethereum Sepolia → Arbitrum Sepolia (EID: 40231)
+- ✅ Arbitrum Sepolia → Ethereum Sepolia (EID: 40161)
+
+---
+
+**Last Updated:** 2025-11-23  
 **Status:** 
 - ✅ LayerZero addresses complete
 - ✅ Arbitrum native bridge addresses complete
 - ✅ EIL bridge connector addresses deployed
+- ✅ All hackathon contracts deployed and initialized
+- ✅ LayerZero peer addresses configured for cross-chain messaging
 
