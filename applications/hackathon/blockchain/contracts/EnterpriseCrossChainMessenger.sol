@@ -67,7 +67,7 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
     ChainRegistry public chainRegistry;
     
     // Message tracking
-    mapping(bytes32 => CrossChainMessage) public messages;
+    mapping(bytes32 => CrossChainMessage) private messages;
     mapping(bytes32 => bytes32) public messageIdToProtocol; // messageId => protocol identifier
     
     // Message counter for unique IDs
