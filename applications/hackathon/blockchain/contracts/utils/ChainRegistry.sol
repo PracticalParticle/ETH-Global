@@ -17,7 +17,7 @@ contract ChainRegistry is Ownable {
     
     // ============ Constructor ============
     
-    constructor() Ownable() {}
+    constructor() Ownable(msg.sender) {}
     
     // ============ State ============
     
