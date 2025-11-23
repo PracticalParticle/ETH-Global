@@ -6,8 +6,9 @@ const MessageCancellationTests = require("./message-cancellation-tests");
 const MessageMetaTxApprovalTests = require("./message-meta-tx-approval-tests");
 
 // Parse command line arguments
+// Check environment variable first, then command line args
 const args = process.argv.slice(2);
-const testSuite = args[0] || "--all";
+const testSuite = process.env.TEST_SUITE || args.find(arg => arg.startsWith("--")) || "--all";
 
 async function runTests() {
     console.log("🧪 ENTERPRISE CROSS-CHAIN MESSENGER SANITY TESTS");

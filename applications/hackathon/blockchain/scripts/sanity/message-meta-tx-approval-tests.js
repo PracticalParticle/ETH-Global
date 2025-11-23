@@ -169,7 +169,7 @@ class MessageMetaTxApprovalTests extends BaseMessengerTest {
                 nonce: this.txIdToApprove,
                 handlerContract: this.contractAddress,
                 handlerSelector: approveMessageSelector,
-                action: 4, // EXECUTE_META_APPROVE (from StateAbstraction)
+                action: 4, // SIGN_META_APPROVE (owner signs, broadcaster will execute with EXECUTE_META_APPROVE)
                 deadline: deadline,
                 maxGasPrice: 0,
                 signer: this.roles.owner
@@ -180,9 +180,10 @@ class MessageMetaTxApprovalTests extends BaseMessengerTest {
             console.log(`     Nonce (txId): ${this.txIdToApprove.toString()}`);
             console.log(`     Handler Contract: ${this.contractAddress}`);
             console.log(`     Handler Selector: ${approveMessageSelector}`);
-            console.log(`     Action: EXECUTE_META_APPROVE (4)`);
+            console.log(`     Action: SIGN_META_APPROVE (4) - Owner signs this`);
             console.log(`     Deadline: ${new Date(deadline * 1000).toLocaleString()}`);
             console.log(`     Signer: ${this.roles.owner}`);
+            console.log(`     Note: Broadcaster will execute with EXECUTE_META_APPROVE (7)`);
             
             // Generate unsigned meta-transaction
             console.log("  🔄 Generating unsigned meta-transaction...");
@@ -231,10 +232,14 @@ class MessageMetaTxApprovalTests extends BaseMessengerTest {
             const routingFee = ethers.parseEther("0.001"); // Small fee for testing
             
             console.log("  📡 Broadcaster executing meta-transaction...");
+            console.log(`     Action: EXECUTE_META_APPROVE (7) - Broadcaster executes`);
             console.log(`     Routing fee: ${ethers.formatEther(routingFee)} ETH`);
             console.log(`     Transaction ID: ${this.txIdToApprove.toString()}`);
+            console.log(`     Note: Contract will verify owner's signature and execute with EXECUTE_META_APPROVE`);
             
             // Execute the meta-transaction with routing fee
+            // The contract's approveMessageWithMetaTx will internally use EXECUTE_META_APPROVE (7)
+            // to execute the meta-transaction that was signed by owner with SIGN_META_APPROVE (4)
             const tx = await contractWithSigner.approveMessageWithMetaTx(
                 this.signedMetaTx,
                 { value: routingFee }
