@@ -73,6 +73,10 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
     // Message counter for unique IDs
     uint256 private _messageCounter;
     
+    // Routing fee tracking (messageKey => fee amount paid by broadcaster)
+    // messageKey is hash of (targetChainId, payload, req) to link approval to execution
+    mapping(bytes32 => uint256) public routingFees;
+    
     // ============ Events ============
     
     event MessageSent(
@@ -156,6 +160,7 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
      * @dev Only owner can request. Creates a time-locked transaction that must be approved.
      *      Routing decision (EIL native bridge vs LayerZero) is automatically determined
      *      based on the MessageRequirements parameters.
+     *      Note: Owner does not pay routing fees - broadcaster will pay when approving.
      * 
      * @param targetChainId Target chain ID
      * @param payload Message payload (arbitrary bytes)
@@ -166,7 +171,7 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         uint256 targetChainId,
         bytes memory payload,
         MessageRequirements.Requirements memory req
-    ) external onlyOwner payable returns (StateAbstraction.TxRecord memory) {
+    ) external onlyOwner returns (StateAbstraction.TxRecord memory) {
         require(chainRegistry.isChainRegistered(targetChainId), "Chain not registered");
         require(payload.length > 0, "Empty payload");
         
@@ -177,11 +182,11 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
             req
         );
         
-        // Request time-delayed transaction
+        // Request time-delayed transaction (no value - broadcaster will pay fees)
         StateAbstraction.TxRecord memory txRecord = _requestStandardTransaction(
             msg.sender,
             address(this),
-            msg.value, // Forward ETH for routing fees
+            0, // No ETH from owner - broadcaster pays routing fees
             MessengerDefinitions.SEND_MESSAGE,
             MessengerDefinitions.SEND_MESSAGE_SELECTOR,
             executionOptions
@@ -193,11 +198,13 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
     /**
      * @notice Approve a pending message with meta-transaction (only broadcaster can execute)
      * @dev Can only approve BEFORE the time delay expires. After time delay, message cannot be approved.
+     *      Broadcaster must send ETH to cover routing fees (LayerZero/EIL native bridge).
      * @param metaTx Meta transaction data
      * @return txRecord Updated transaction record
      */
     function approveMessageWithMetaTx(StateAbstraction.MetaTransaction memory metaTx) 
         external 
+        payable
         onlyBroadcaster 
         returns (StateAbstraction.TxRecord memory) 
     {
@@ -207,6 +214,31 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
             block.timestamp < txRecord.releaseTime,
             "Cannot approve after time delay expired"
         );
+        
+        // Decode execution options to get message parameters
+        // Execution options are wrapped in StandardExecutionOptions struct
+        StateAbstraction.StandardExecutionOptions memory options = abi.decode(
+            txRecord.params.executionOptions,
+            (StateAbstraction.StandardExecutionOptions)
+        );
+        
+        // Decode the actual parameters
+        (uint256 targetChainId, bytes memory payload, MessageRequirements.Requirements memory req) = 
+            abi.decode(
+                options.params,
+                (uint256, bytes, MessageRequirements.Requirements)
+            );
+        
+        // Create message key to link approval fee to execution
+        bytes32 messageKey = keccak256(abi.encode(
+            block.chainid,
+            targetChainId,
+            payload,
+            req
+        ));
+        
+        // Store routing fee paid by broadcaster (will be used during execution)
+        routingFees[messageKey] = msg.value;
         
         return _approveTransactionWithMetaTx(
             metaTx,
@@ -230,6 +262,7 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
     /**
      * @notice Execute sending a message (internal execution function)
      * @dev Called by the state machine after approval
+     *      Uses routing fees stored by broadcaster during approval
      * @param targetChainId Target chain ID
      * @param payload Message payload
      * @param req Message requirements
@@ -240,20 +273,39 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         MessageRequirements.Requirements memory req
     ) external payable {
         SharedValidation.validateInternalCallInternal(address(this));
-        _sendMessage(targetChainId, payload, req);
+        
+        // Create message key to retrieve stored routing fee (same as in approveMessageWithMetaTx)
+        bytes32 messageKey = keccak256(abi.encode(
+            block.chainid,
+            targetChainId,
+            payload,
+            req
+        ));
+        
+        // Retrieve routing fee stored by broadcaster during approval
+        uint256 storedFee = routingFees[messageKey];
+        require(storedFee > 0, "Routing fee not provided by broadcaster");
+        
+        // Clear the stored fee to prevent reuse
+        delete routingFees[messageKey];
+        
+        // Send message with broadcaster's fee
+        _sendMessageWithFee(targetChainId, payload, req, storedFee);
     }
     
     /**
-     * @notice Internal function to actually send the message
+     * @notice Internal function to actually send the message with fee
      * @param targetChainId Target chain ID
      * @param payload Message payload
      * @param req Message requirements
+     * @param fee Routing fee to use
      * @return messageId Unique message identifier
      */
-    function _sendMessage(
+    function _sendMessageWithFee(
         uint256 targetChainId,
         bytes memory payload,
-        MessageRequirements.Requirements memory req
+        MessageRequirements.Requirements memory req,
+        uint256 fee
     ) internal returns (bytes32 messageId) {
         // Generate unique message ID
         messageId = keccak256(abi.encodePacked(
@@ -288,7 +340,8 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         
         // Route message via HybridOrchestrationRouter
         // Router will automatically choose EIL native bridge or LayerZero based on requirements
-        bytes32 routedMessageId = router.routeMessage{value: msg.value}(
+        // Use the fee provided (from broadcaster)
+        bytes32 routedMessageId = router.routeMessage{value: fee}(
             targetChainId,
             messagePayload,
             req
@@ -342,6 +395,22 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
             MessengerDefinitions.SEND_MESSAGE_SELECTOR,
             executionData
         );
+    }
+    
+    /**
+     * @notice Internal function to actually send the message (wrapper for backward compatibility)
+     * @param targetChainId Target chain ID
+     * @param payload Message payload
+     * @param req Message requirements
+     * @return messageId Unique message identifier
+     */
+    function _sendMessage(
+        uint256 targetChainId,
+        bytes memory payload,
+        MessageRequirements.Requirements memory req
+    ) internal returns (bytes32 messageId) {
+        // Use msg.value as fee (for backward compatibility, though should be 0)
+        return _sendMessageWithFee(targetChainId, payload, req, msg.value);
     }
     
     // ============ Message Receiving ============
