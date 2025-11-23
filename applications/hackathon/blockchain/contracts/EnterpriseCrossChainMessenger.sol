@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // Bloxchain imports
 import "../../../../contracts/core/access/SecureOwnable.sol";
@@ -28,7 +29,7 @@ import "./utils/ChainRegistry.sol";
  * 
  * @custom:security-contact security@particlecrypto.com
  */
-contract EnterpriseCrossChainMessenger is SecureOwnable {
+contract EnterpriseCrossChainMessenger is SecureOwnable, UUPSUpgradeable {
     using MessageRequirements for MessageRequirements.Requirements;
     using SharedValidation for *;
     
@@ -152,6 +153,14 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
             permissions.functionPermissions
         );
     }
+    
+    // ============ UUPS Upgrade Authorization ============
+    
+    /**
+     * @notice Authorize upgrade (UUPS pattern)
+     * @dev Only owner can authorize upgrades
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     
     // ============ Message Sending (Bloxchain Workflow) ============
     

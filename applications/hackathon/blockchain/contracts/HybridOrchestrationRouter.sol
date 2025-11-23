@@ -70,7 +70,7 @@ contract HybridOrchestrationRouter is OApp {
         address _endpoint,
         address _delegate,
         address _chainRegistry
-    ) OApp(_endpoint, _delegate) {
+    ) OApp(_endpoint, _delegate) Ownable(_delegate) {
         chainRegistry = ChainRegistry(_chainRegistry);
     }
     
