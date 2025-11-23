@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Custom
 pragma solidity ^0.8.25;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+// Bloxchain imports
+import "../../../../contracts/core/access/SecureOwnable.sol";
 
 import "./HybridOrchestrationRouter.sol";
 import "./utils/MessageRequirements.sol";
@@ -18,10 +21,11 @@ import "./utils/ChainRegistry.sol";
  * - Requirement-based routing: Cost, speed, security, chain support
  * - Message tracking and status
  * - Bidirectional messaging support
+ * - Bloxchain security: Multi-signature workflows, time-locked operations, secure ownership
  * 
  * @custom:security-contact security@particlecrypto.com
  */
-contract EnterpriseCrossChainMessenger is Ownable {
+contract EnterpriseCrossChainMessenger is SecureOwnable {
     using MessageRequirements for MessageRequirements.Requirements;
     
     // ============ Errors ============
@@ -94,12 +98,37 @@ contract EnterpriseCrossChainMessenger is Ownable {
         string reason
     );
     
-    // ============ Constructor ============
+    // ============ Initialization ============
     
-    constructor(
+    /**
+     * @notice Initialize the contract
+     * @param initialOwner Initial owner address
+     * @param broadcaster Broadcaster address
+     * @param recovery Recovery address
+     * @param timeLockPeriodSec Time lock period in seconds
+     * @param eventForwarder Event forwarder address
+     * @param _router Hybrid orchestration router
+     * @param _chainRegistry Chain registry
+     */
+    function initialize(
+        address initialOwner,
+        address broadcaster,
+        address recovery,
+        uint256 timeLockPeriodSec,
+        address eventForwarder,
         address _router,
         address _chainRegistry
-    ) Ownable(msg.sender) {
+    ) public initializer {
+        // Initialize SecureOwnable
+        SecureOwnable.initialize(
+            initialOwner,
+            broadcaster,
+            recovery,
+            timeLockPeriodSec,
+            eventForwarder
+        );
+        
+        // Validate and set integration contracts
         require(_router != address(0), "Invalid router");
         require(_chainRegistry != address(0), "Invalid chain registry");
         
@@ -120,7 +149,7 @@ contract EnterpriseCrossChainMessenger is Ownable {
         uint256 targetChainId,
         bytes memory payload,
         MessageRequirements.Requirements memory req
-    ) external payable returns (bytes32 messageId) {
+    ) public payable returns (bytes32 messageId) {
         require(chainRegistry.isChainRegistered(targetChainId), "Chain not registered");
         require(payload.length > 0, "Empty payload");
         
@@ -205,7 +234,7 @@ contract EnterpriseCrossChainMessenger is Ownable {
         MessageRequirements.Requirements memory req = 
             MessageRequirements.createCostSensitiveRequirements(0, maxDelay);
         
-        return sendMessage(targetChainId, payload, req);
+        return this.sendMessage(targetChainId, payload, req);
     }
     
     /**
@@ -221,7 +250,7 @@ contract EnterpriseCrossChainMessenger is Ownable {
         MessageRequirements.Requirements memory req = 
             MessageRequirements.createTimeSensitiveRequirements(0);
         
-        return sendMessage(targetChainId, payload, req);
+        return this.sendMessage(targetChainId, payload, req);
     }
     
     /**
@@ -241,7 +270,7 @@ contract EnterpriseCrossChainMessenger is Ownable {
         MessageRequirements.Requirements memory req = 
             MessageRequirements.createSecuritySensitiveRequirements(0, maxDelay, securityLevel);
         
-        return sendMessage(targetChainId, payload, req);
+        return this.sendMessage(targetChainId, payload, req);
     }
     
     // ============ Message Receiving ============
