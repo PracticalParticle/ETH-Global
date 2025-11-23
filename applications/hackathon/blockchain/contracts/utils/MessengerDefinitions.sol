@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Custom
 pragma solidity ^0.8.25;
 
-import "../../../../contracts/core/base/lib/StateAbstraction.sol";
-import "../../../../contracts/interfaces/IDefinition.sol";
+import "../../../../../contracts/core/base/lib/StateAbstraction.sol";
+import "../../../../../contracts/interfaces/IDefinition.sol";
 
 /**
  * @title MessengerDefinitions
