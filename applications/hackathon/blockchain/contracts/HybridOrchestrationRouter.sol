@@ -32,6 +32,9 @@ contract HybridOrchestrationRouter is OApp {
     
     ChainRegistry public chainRegistry;
     
+    // Message receiver (EnterpriseCrossChainMessenger)
+    address public messageReceiver;
+    
     // Native bridge connectors
     mapping(uint256 => address) public l1BridgeConnectors;  // chainId => L1 bridge
     mapping(uint256 => address) public l2BridgeConnectors;  // chainId => L2 bridge
@@ -59,6 +62,7 @@ contract HybridOrchestrationRouter is OApp {
     
     event NativeBridgeRegistered(uint256 indexed chainId, address l1Bridge, address l2Bridge);
     event NativeBridgeUnregistered(uint256 indexed chainId);
+    event MessageReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
     
     // ============ Constructor ============
     
@@ -124,6 +128,17 @@ contract HybridOrchestrationRouter is OApp {
         emit NativeBridgeUnregistered(chainId);
     }
     
+    /**
+     * @notice Set message receiver address
+     * @param _messageReceiver Address of EnterpriseCrossChainMessenger
+     */
+    function setMessageReceiver(address _messageReceiver) external onlyOwner {
+        require(_messageReceiver != address(0), "Invalid receiver");
+        address oldReceiver = messageReceiver;
+        messageReceiver = _messageReceiver;
+        emit MessageReceiverUpdated(oldReceiver, _messageReceiver);
+    }
+    
     // ============ Routing Functions ============
     
     /**
@@ -164,22 +179,27 @@ contract HybridOrchestrationRouter is OApp {
         messageId = keccak256(abi.encodePacked(chainId, payload, block.timestamp, msg.sender));
         
         // Encode envelope: (app, payload)
+        // The envelope format expected by bridge connectors: (address appSender, bytes innerPayload)
         bytes memory envelope = abi.encode(address(this), payload);
         
-        // Encode forward call: forwardFromL2(target, envelope, gasLimit)
+        // Encode forward call that will be executed on destination chain
+        // The target is this router (on destination chain), which will forward to messenger
         bytes memory forwardCalldata = abi.encodeWithSignature(
-            "forwardFromL2(address,bytes,uint256)",
-            l1Bridge,
-            envelope,
-            200000 // gas limit
+            "forwardFromNativeBridge(uint256,bytes)",
+            block.chainid, // source chain ID
+            payload
         );
         
-        // Call L2 bridge to send message
+        // Wrap in envelope for bridge connector
+        bytes memory wrappedPayload = abi.encode(address(this), forwardCalldata);
+        
+        // Call bridge connector to send message
+        // Note: This assumes we're on L2 sending to L1 (adjust for L1->L2 if needed)
         (bool success, bytes memory reason) = l2Bridge.call(
             abi.encodeWithSignature(
                 "sendMessageToL1(address,bytes,uint256)",
                 l1Bridge,
-                forwardCalldata,
+                wrappedPayload,
                 200000
             )
         );
@@ -293,9 +313,48 @@ contract HybridOrchestrationRouter is OApp {
         address _executor,
         bytes calldata _extraData
     ) internal override {
-        // Messages are handled by EnterpriseCrossChainManager
-        // This router just passes through
-        // In production, you might want to emit events or handle routing here
+        // Forward to message receiver if set
+        if (messageReceiver != address(0)) {
+            uint256 sourceChainId = chainRegistry.getChainId(_origin.srcEid);
+            (bool success, ) = messageReceiver.call(
+                abi.encodeWithSignature(
+                    "handleIncomingMessage(uint256,bytes)",
+                    sourceChainId,
+                    _message
+                )
+            );
+            require(success, "Message forwarding failed");
+        }
+    }
+    
+    /**
+     * @notice Forward message from EIL native bridge
+     * @dev Called by native bridge connector when message is received
+     * @param sourceChainId Source chain ID
+     * @param payload Message payload
+     */
+    function forwardFromNativeBridge(
+        uint256 sourceChainId,
+        bytes memory payload
+    ) external {
+        // Verify caller is a registered bridge connector
+        require(
+            l1BridgeConnectors[sourceChainId] == msg.sender || 
+            l2BridgeConnectors[sourceChainId] == msg.sender,
+            "Unauthorized bridge"
+        );
+        
+        // Forward to message receiver if set
+        if (messageReceiver != address(0)) {
+            (bool success, ) = messageReceiver.call(
+                abi.encodeWithSignature(
+                    "handleIncomingMessage(uint256,bytes)",
+                    sourceChainId,
+                    payload
+                )
+            );
+            require(success, "Message forwarding failed");
+        }
     }
 }
 
