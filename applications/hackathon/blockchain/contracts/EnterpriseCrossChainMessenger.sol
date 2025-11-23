@@ -440,16 +440,30 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         require(sourceChainId == originalSourceChainId, "Source chain mismatch");
         
         // Check if message already exists (idempotency)
-        if (messages[messageId].status != MessageStatus.PENDING) {
-            // Message already processed, but we can still emit event
+        // Use sender check instead of status, since status defaults to PENDING (0)
+        if (messages[messageId].sender != address(0)) {
+            // Message already exists, update status if still pending
+            if (messages[messageId].status == MessageStatus.PENDING) {
+                messages[messageId].status = MessageStatus.DELIVERED;
+                messages[messageId].deliveredAt = block.timestamp;
+            }
             emit MessageDelivered(messageId, block.chainid, block.timestamp);
             return;
         }
         
-        // Update message status
-        CrossChainMessage storage message = messages[messageId];
-        message.status = MessageStatus.DELIVERED;
-        message.deliveredAt = block.timestamp;
+        // Create message on destination chain (message doesn't exist yet)
+        messages[messageId] = CrossChainMessage({
+            sourceChainId: originalSourceChainId,
+            targetChainId: block.chainid, // This is the destination chain
+            sender: originalSender,
+            payload: payload,
+            status: MessageStatus.DELIVERED,
+            messageId: messageId,
+            routingProtocol: bytes32(0), // Protocol info not available on destination
+            sentAt: 0, // Sent timestamp not available on destination
+            deliveredAt: block.timestamp,
+            securityLevel: securityLevel
+        });
         
         emit MessageDelivered(messageId, block.chainid, block.timestamp);
     }
