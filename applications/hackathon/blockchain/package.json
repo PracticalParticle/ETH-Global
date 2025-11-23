@@ -9,9 +9,9 @@
     "deploy": "hardhat run scripts/deploy.js",
     "initialize": "hardhat run scripts/initialize.js",
     "set-peers": "hardhat run scripts/setLayerZeroPeers.js",
-    "sanity": "hardhat run scripts/sanity/run-tests.js",
-    "sanity:cancellation": "hardhat run scripts/sanity/run-tests.js --network sepolia --cancellation",
-    "sanity:meta-tx": "hardhat run scripts/sanity/run-tests.js --network sepolia --meta-tx",
+    "sanity": "npx hardhat run scripts/sanity/run-tests.js",
+    "sanity:cancellation": "npx hardhat run scripts/sanity/run-tests.js --network sepolia --cancellation",
+    "sanity:meta-tx": "npx hardhat run scripts/sanity/run-tests.js --network sepolia --meta-tx",
     "clean": "hardhat clean"
   },
   "keywords": [
@@ -44,7 +44,7 @@
     "chai": "^4.5.0",
     "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
-    "hardhat": "^3.0.0",
+    "hardhat": "^3.0.15",
     "hardhat-gas-reporter": "^1.0.10",
     "solidity-coverage": "^0.8.16",
     "ts-node": "^10.9.2",
