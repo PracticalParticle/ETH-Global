@@ -17,7 +17,6 @@ import {
   fantom,
   // Testnets
   sepolia,
-  holesky,
   arbitrumSepolia,
   optimismSepolia,
   baseSepolia,
@@ -62,8 +61,7 @@ export const LAYERZERO_EIDS: Record<number, number> = {
   // Testnets
   // Sepolia
   11155111: 40161,
-  // Holesky
-  17000: 40181,
+
   // Arbitrum Sepolia
   421614: 40231,
   // Optimism Sepolia
@@ -141,7 +139,7 @@ export function getNativeTokenSymbol(chainId: number): string {
 // Testnet chain IDs
 const TESTNET_CHAIN_IDS = new Set([
   11155111, // Sepolia
-  17000,    // Holesky
+
   421614,   // Arbitrum Sepolia
   11155420, // Optimism Sepolia
   84532,    // Base Sepolia
@@ -174,7 +172,6 @@ export const LAYERZERO_CHAINS: readonly Chain[] = [
   fantom,
   // Testnets
   sepolia,
-  holesky,
   arbitrumSepolia,
   optimismSepolia,
   baseSepolia,
