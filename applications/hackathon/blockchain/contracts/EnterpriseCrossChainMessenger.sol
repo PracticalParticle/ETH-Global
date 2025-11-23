@@ -488,13 +488,19 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
     // ============ View Functions ============
     
     /**
-     * @notice Get message details (only owner)
+     * @notice Get message details (only owner on destination chain)
+     * @dev Can only view messages on the destination chain where they were delivered
      * @param messageId Message ID
      * @return message Message details
      */
     function getMessage(bytes32 messageId) external view onlyOwner returns (CrossChainMessage memory) {
         CrossChainMessage memory message = messages[messageId];
         require(message.sender != address(0), "Message not found");
+        // Only allow viewing on the destination chain
+        require(
+            message.targetChainId == block.chainid,
+            "Message can only be viewed on destination chain"
+        );
         return message;
     }
     
