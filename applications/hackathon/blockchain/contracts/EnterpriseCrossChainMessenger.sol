@@ -5,6 +5,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 // Bloxchain imports
 import "../../../../contracts/core/access/SecureOwnable.sol";
+import "../../../../contracts/utils/SharedValidation.sol";
+import "../../../../contracts/interfaces/IDefinition.sol";
+import "./utils/MessengerDefinitions.sol";
 
 import "./HybridOrchestrationRouter.sol";
 import "./utils/MessageRequirements.sol";
@@ -27,6 +30,7 @@ import "./utils/ChainRegistry.sol";
  */
 contract EnterpriseCrossChainMessenger is SecureOwnable {
     using MessageRequirements for MessageRequirements.Requirements;
+    using SharedValidation for *;
     
     // ============ Errors ============
     
@@ -134,25 +138,123 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         
         router = HybridOrchestrationRouter(_router);
         chainRegistry = ChainRegistry(_chainRegistry);
+        
+        // Load Messenger-specific definitions
+        IDefinition.RolePermission memory permissions = 
+            MessengerDefinitions.getRolePermissions();
+        _loadDefinitions(
+            MessengerDefinitions.getFunctionSchemas(),
+            permissions.roleHashes,
+            permissions.functionPermissions
+        );
     }
     
-    // ============ Message Sending ============
+    // ============ Message Sending (Bloxchain Workflow) ============
     
     /**
-     * @notice Send a cross-chain message with automatic routing
+     * @notice Request to send a cross-chain message (time-delayed operation)
+     * @dev Only owner can request. Creates a time-locked transaction that must be approved.
+     *      Routing decision (EIL native bridge vs LayerZero) is automatically determined
+     *      based on the MessageRequirements parameters.
+     * 
      * @param targetChainId Target chain ID
      * @param payload Message payload (arbitrary bytes)
      * @param req Message requirements for routing decision
-     * @return messageId Unique message identifier
+     * @return txRecord Transaction record with txId
      */
-    function sendMessage(
+    function sendMessageRequest(
         uint256 targetChainId,
         bytes memory payload,
         MessageRequirements.Requirements memory req
-    ) public payable returns (bytes32 messageId) {
+    ) external onlyOwner payable returns (StateAbstraction.TxRecord memory) {
         require(chainRegistry.isChainRegistered(targetChainId), "Chain not registered");
         require(payload.length > 0, "Empty payload");
         
+        // Create execution options with message parameters
+        bytes memory executionOptions = _createMessageExecutionOptions(
+            targetChainId,
+            payload,
+            req
+        );
+        
+        // Request time-delayed transaction
+        StateAbstraction.TxRecord memory txRecord = _requestStandardTransaction(
+            msg.sender,
+            address(this),
+            msg.value, // Forward ETH for routing fees
+            MessengerDefinitions.SEND_MESSAGE,
+            MessengerDefinitions.SEND_MESSAGE_SELECTOR,
+            executionOptions
+        );
+        
+        return txRecord;
+    }
+    
+    /**
+     * @notice Approve a pending message with meta-transaction (only broadcaster can execute)
+     * @dev Can only approve BEFORE the time delay expires. After time delay, message cannot be approved.
+     * @param metaTx Meta transaction data
+     * @return txRecord Updated transaction record
+     */
+    function approveMessageWithMetaTx(StateAbstraction.MetaTransaction memory metaTx) 
+        external 
+        onlyBroadcaster 
+        returns (StateAbstraction.TxRecord memory) 
+    {
+        // Check that time delay has NOT expired yet
+        StateAbstraction.TxRecord memory txRecord = metaTx.txRecord;
+        require(
+            block.timestamp < txRecord.releaseTime,
+            "Cannot approve after time delay expired"
+        );
+        
+        return _approveTransactionWithMetaTx(
+            metaTx,
+            txRecord.params.operationType,
+            MessengerDefinitions.APPROVE_MESSAGE_META_SELECTOR,
+            StateAbstraction.TxAction.EXECUTE_META_APPROVE
+        );
+    }
+    
+    /**
+     * @notice Cancel a pending message request (only owner)
+     * @param txId The transaction ID to cancel
+     * @return txRecord Updated transaction record
+     */
+    function cancelMessage(uint256 txId) external onlyOwner returns (StateAbstraction.TxRecord memory) {
+        StateAbstraction.TxRecord memory existing = getTransaction(txId);
+        StateAbstraction.TxRecord memory updated = _cancelTransaction(txId, existing.params.operationType);
+        return updated;
+    }
+    
+    /**
+     * @notice Execute sending a message (internal execution function)
+     * @dev Called by the state machine after approval
+     * @param targetChainId Target chain ID
+     * @param payload Message payload
+     * @param req Message requirements
+     */
+    function executeSendMessage(
+        uint256 targetChainId,
+        bytes memory payload,
+        MessageRequirements.Requirements memory req
+    ) external payable {
+        SharedValidation.validateInternalCallInternal(address(this));
+        _sendMessage(targetChainId, payload, req);
+    }
+    
+    /**
+     * @notice Internal function to actually send the message
+     * @param targetChainId Target chain ID
+     * @param payload Message payload
+     * @param req Message requirements
+     * @return messageId Unique message identifier
+     */
+    function _sendMessage(
+        uint256 targetChainId,
+        bytes memory payload,
+        MessageRequirements.Requirements memory req
+    ) internal returns (bytes32 messageId) {
         // Generate unique message ID
         messageId = keccak256(abi.encodePacked(
             block.chainid,
@@ -163,7 +265,7 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
             _messageCounter++
         ));
         
-        // Determine routing protocol
+        // Determine routing protocol based on requirements
         uint256[] memory nativeBridgeChains = router.getNativeBridgeChains();
         bool useNativeBridge = MessageRequirements.shouldUseNativeBridge(
             targetChainId,
@@ -179,12 +281,13 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         bytes memory messagePayload = abi.encode(
             messageId,
             block.chainid,
-            msg.sender,
+            owner(), // Use owner as sender (since owner requested it)
             payload,
             req.securityLevel
         );
         
         // Route message via HybridOrchestrationRouter
+        // Router will automatically choose EIL native bridge or LayerZero based on requirements
         bytes32 routedMessageId = router.routeMessage{value: msg.value}(
             targetChainId,
             messagePayload,
@@ -195,7 +298,7 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
         messages[messageId] = CrossChainMessage({
             sourceChainId: block.chainid,
             targetChainId: targetChainId,
-            sender: msg.sender,
+            sender: owner(),
             payload: payload,
             status: MessageStatus.PENDING,
             messageId: messageId,
@@ -211,66 +314,34 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
             messageId,
             block.chainid,
             targetChainId,
-            msg.sender,
+            owner(),
             protocolId,
             req.securityLevel
         );
-        
-        return messageId;
     }
     
     /**
-     * @notice Send a cost-sensitive message (will prefer EIL native bridge if available)
+     * @notice Create execution options for message sending
      * @param targetChainId Target chain ID
      * @param payload Message payload
-     * @param maxDelay Maximum acceptable delay in seconds
-     * @return messageId Unique message identifier
+     * @param req Message requirements
+     * @return executionOptions Encoded execution options
      */
-    function sendCostSensitiveMessage(
+    function _createMessageExecutionOptions(
         uint256 targetChainId,
         bytes memory payload,
-        uint256 maxDelay
-    ) external payable returns (bytes32 messageId) {
-        MessageRequirements.Requirements memory req = 
-            MessageRequirements.createCostSensitiveRequirements(0, maxDelay);
+        MessageRequirements.Requirements memory req
+    ) internal pure returns (bytes memory) {
+        bytes memory executionData = abi.encode(
+            targetChainId,
+            payload,
+            req
+        );
         
-        return this.sendMessage(targetChainId, payload, req);
-    }
-    
-    /**
-     * @notice Send a time-sensitive message (will prefer LayerZero)
-     * @param targetChainId Target chain ID
-     * @param payload Message payload
-     * @return messageId Unique message identifier
-     */
-    function sendTimeSensitiveMessage(
-        uint256 targetChainId,
-        bytes memory payload
-    ) external payable returns (bytes32 messageId) {
-        MessageRequirements.Requirements memory req = 
-            MessageRequirements.createTimeSensitiveRequirements(0);
-        
-        return this.sendMessage(targetChainId, payload, req);
-    }
-    
-    /**
-     * @notice Send a security-sensitive message
-     * @param targetChainId Target chain ID
-     * @param payload Message payload
-     * @param securityLevel Security level requirement
-     * @param maxDelay Maximum acceptable delay
-     * @return messageId Unique message identifier
-     */
-    function sendSecuritySensitiveMessage(
-        uint256 targetChainId,
-        bytes memory payload,
-        MessageRequirements.SecurityLevel securityLevel,
-        uint256 maxDelay
-    ) external payable returns (bytes32 messageId) {
-        MessageRequirements.Requirements memory req = 
-            MessageRequirements.createSecuritySensitiveRequirements(0, maxDelay, securityLevel);
-        
-        return this.sendMessage(targetChainId, payload, req);
+        return StateAbstraction.createStandardExecutionOptions(
+            MessengerDefinitions.SEND_MESSAGE_SELECTOR,
+            executionData
+        );
     }
     
     // ============ Message Receiving ============
@@ -348,11 +419,11 @@ contract EnterpriseCrossChainMessenger is SecureOwnable {
     // ============ View Functions ============
     
     /**
-     * @notice Get message details
+     * @notice Get message details (only owner)
      * @param messageId Message ID
      * @return message Message details
      */
-    function getMessage(bytes32 messageId) external view returns (CrossChainMessage memory) {
+    function getMessage(bytes32 messageId) external view onlyOwner returns (CrossChainMessage memory) {
         CrossChainMessage memory message = messages[messageId];
         require(message.sender != address(0), "Message not found");
         return message;
