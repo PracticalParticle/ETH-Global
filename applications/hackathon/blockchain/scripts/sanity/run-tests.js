@@ -3,6 +3,7 @@
  */
 
 const MessageCancellationTests = require("./message-cancellation-tests");
+const MessageMetaTxApprovalTests = require("./message-meta-tx-approval-tests");
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -20,15 +21,31 @@ async function runTests() {
         if (testSuite === "--all" || testSuite === "--cancellation") {
             console.log("🚀 Running Message Cancellation Tests...\n");
             const cancellationTests = new MessageCancellationTests();
-            success = await cancellationTests.runTest();
+            const cancellationSuccess = await cancellationTests.runTest();
             
-            if (!success && testSuite === "--all") {
-                console.log("\n⚠️  Some tests failed, but continuing with other suites...\n");
+            if (!cancellationSuccess && testSuite === "--all") {
+                console.log("\n⚠️  Cancellation tests failed, but continuing with other suites...\n");
+            }
+            success = cancellationSuccess;
+        }
+
+        if (testSuite === "--all" || testSuite === "--meta-tx") {
+            console.log("🚀 Running Message Meta-Transaction Approval Tests...\n");
+            const metaTxTests = new MessageMetaTxApprovalTests();
+            const metaTxSuccess = await metaTxTests.runTest();
+            
+            if (!metaTxSuccess && testSuite === "--all") {
+                console.log("\n⚠️  Meta-transaction tests failed, but continuing with other suites...\n");
+            }
+            // For --all, success is true only if all tests pass
+            if (testSuite === "--all") {
+                success = success && metaTxSuccess;
+            } else {
+                success = metaTxSuccess;
             }
         }
 
         if (testSuite === "--all") {
-            // Add more test suites here as they are created
             console.log("\n✅ All test suites completed");
         }
 
@@ -49,9 +66,11 @@ if (args.includes("--help") || args.includes("-h")) {
     console.log("\nAvailable test suites:");
     console.log("  --all          Run all test suites");
     console.log("  --cancellation Run message cancellation tests");
+    console.log("  --meta-tx       Run message meta-transaction approval tests");
     console.log("\nExamples:");
     console.log("  node run-tests.js --all");
     console.log("  node run-tests.js --cancellation");
+    console.log("  node run-tests.js --meta-tx");
     process.exit(0);
 }
 

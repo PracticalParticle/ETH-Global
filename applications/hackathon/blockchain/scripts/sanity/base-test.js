@@ -8,6 +8,17 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
+// Import EIP-712 signing utilities
+let EIP712Signer, Web3;
+try {
+    EIP712Signer = require(path.join(__dirname, "..", "..", "..", "..", "scripts", "sanity", "utils", "eip712-signing"));
+    Web3 = require("web3");
+} catch (error) {
+    console.warn("⚠️  EIP-712 signing utilities not found. Meta-transaction tests may not work.");
+    EIP712Signer = null;
+    Web3 = null;
+}
+
 // Helper to get RPC URL from environment or Hardhat config
 function getRpcUrl() {
     const network = process.env.HARDHAT_NETWORK || "sepolia";
@@ -54,6 +65,10 @@ class BaseMessengerTest {
         
         // Network configuration
         this.networkName = process.env.HARDHAT_NETWORK || "sepolia";
+        
+        // EIP-712 signing support
+        this.eip712Signer = null;
+        this.web3 = null; // Web3 instance for EIP-712 signing
     }
 
     async initializeAutoMode() {
@@ -182,7 +197,10 @@ class BaseMessengerTest {
             this.contractABI = artifact.abi;
             
             // Initialize wallets from environment variables
+            // Include PRIVATE_KEY_BROADCASTER for meta-transaction tests
             const privateKeys = [
+                process.env.PRIVATE_KEY, // Main private key (usually owner)
+                process.env.PRIVATE_KEY_BROADCASTER, // Broadcaster private key
                 process.env.TEST_WALLET_1_PRIVATE_KEY,
                 process.env.TEST_WALLET_2_PRIVATE_KEY,
                 process.env.TEST_WALLET_3_PRIVATE_KEY,
@@ -482,6 +500,60 @@ class BaseMessengerTest {
     // Abstract method - must be implemented by subclasses
     async executeTests() {
         throw new Error("executeTests() must be implemented by subclasses");
+    }
+    
+    /**
+     * Generate unsigned meta-transaction for existing transaction
+     * @param {bigint|string} txId Transaction ID
+     * @param {object} metaTxParams Meta-transaction parameters
+     * @returns {Promise<object>} Unsigned meta-transaction
+     */
+    async generateUnsignedMetaTransactionForExisting(txId, metaTxParams) {
+        try {
+            // Call the contract's generateUnsignedMetaTransactionForExisting function
+            const unsignedMetaTx = await this.contract.generateUnsignedMetaTransactionForExisting(
+                txId,
+                metaTxParams
+            );
+            return unsignedMetaTx;
+        } catch (error) {
+            throw new Error(`Failed to generate unsigned meta-transaction: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Sign a meta-transaction using EIP-712
+     * @param {object} metaTx Meta-transaction object
+     * @param {string} privateKey Private key to sign with
+     * @returns {Promise<object>} Signed meta-transaction
+     */
+    async signMetaTransaction(metaTx, privateKey) {
+        if (!this.eip712Signer || !this.web3) {
+            throw new Error("EIP-712 signer not initialized. Call initializeEIP712Signer() first.");
+        }
+        
+        // Convert ethers contract to web3 contract for EIP-712 signing
+        const web3Contract = new this.web3.eth.Contract(this.contractABI, this.contractAddress);
+        
+        // Convert private key format if needed (ethers Wallet private key to hex string)
+        let privateKeyHex = privateKey;
+        if (typeof privateKey === 'object' && privateKey.privateKey) {
+            privateKeyHex = privateKey.privateKey;
+        } else if (typeof privateKey !== 'string') {
+            privateKeyHex = privateKey.toString();
+        }
+        
+        // Ensure private key starts with 0x
+        if (!privateKeyHex.startsWith('0x')) {
+            privateKeyHex = '0x' + privateKeyHex;
+        }
+        
+        try {
+            const signedMetaTx = await this.eip712Signer.signMetaTransaction(metaTx, privateKeyHex, web3Contract);
+            return signedMetaTx;
+        } catch (error) {
+            throw new Error(`Failed to sign meta-transaction: ${error.message}`);
+        }
     }
 }
 
